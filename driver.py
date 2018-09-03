@@ -1,16 +1,24 @@
-import asyncio
-import cpbot
 
-TOKEN = 'token'
-BOT_ID = 'id'
+import asyncio
+import logging
+import os
+
+from bot.bot import Bot
+
+TOKEN = os.environ['TOKEN']
 NAME = 'CPBot'
-TRIGGERS = ['trigger']
-CHANNELS = ['channel']
+TRIGGERS = ['.cp']
+CHANNELS = ['channel_id']
+AUTHOR = 'author_id'
+
 
 def main():
-    bot = cpbot.CPBot(TOKEN, BOT_ID, name=NAME, triggers=TRIGGERS, allowed_channels=CHANNELS)
+    logging.basicConfig(level=logging.WARNING)
+    bot = Bot(TOKEN, name=NAME, author_id=AUTHOR, triggers=TRIGGERS, allowed_channels=CHANNELS)
     loop = asyncio.get_event_loop()
     loop.run_until_complete(bot.run())
+    loop.close()
+
 
 if __name__ == '__main__':
     main()
