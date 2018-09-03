@@ -1,4 +1,3 @@
-
 import logging
 import platform
 import time
@@ -13,17 +12,15 @@ logger = logging.getLogger(__name__)
 
 
 class Bot:
-
     MSG_MAX_CONTESTS = 6
 
-    def __init__(self, token, name='Bot', author_id=None, triggers=None, allowed_channels=None):
+    def __init__(self, token, name='Bot', activity_name=None, author_id=None, triggers=None, allowed_channels=None):
         self.name = name
         self.author_id = author_id
         self.triggers = triggers
         self.allowed_channels = allowed_channels
 
-        self.client = Client(token, name=name)
-        self.client.on_message = self.on_message
+        self.client = Client(token, name=name, activity_name=activity_name, on_message=self.on_message)
         self.fetcher = CompositeFetcher([CodeforcesFetcher(), CodeChefFetcher()])
 
         self.help_message = {}
@@ -31,8 +28,8 @@ class Bot:
             self.help_message['content'] = '*@mention me to activate me.*\n'
         else:
             self.help_message['content'] = f'*@mention me or use my trigger* `{self.triggers[0]}` *to activate me.*\n'
-        self.help_message['content'] += 'Supported commands:\n'
         self.help_message['embed'] = {
+            'title': 'Supported commands:',
             'fields': [
                 {
                     'name': '`beep`',
@@ -54,10 +51,13 @@ class Bot:
             ],
         }
 
-        self.info_message = f'*Hello, I am **{self.name}**!*\n' \
-                            f'A half-baked bot made by <@{self.author_id}>\n' \
-                            f'`Python version: Python {platform.python_version()}`\n' \
-                            '`Uptime: {:.2} hours`'
+        self.info_message = {
+            'embed': {
+                'title': f'*Hello, I am **{self.name}**!*',
+                'description': f'*A half-baked bot made by <@{self.author_id}>\n'
+                               f'Running on Python {platform.python_version()} like a boss*',
+            },
+        }
 
     async def run(self):
         await self.fetcher.run()
@@ -81,7 +81,21 @@ class Bot:
             reply = {'content': 'boop'}
             await client.send_message(reply, channel_id)
         elif arglen == 2 and args[1] == 'info':
-            reply = {'content': self.info_message.format((time.time() - client.start_time) / 3600)}
+            reply = dict(self.info_message)
+            now = time.time()
+            uptime = (now - client.start_time) / 3600
+            field1 = {
+                'name': 'Bot uptime:',
+                'value': f'Online since {uptime:.1f} hrs ago'
+            }
+            field2 = {
+                'name': 'Last updated:',
+                'value': '',
+            }
+            for f in self.fetcher.fetchers:
+                last = (now - f.last_fetched) / 60
+                field2['value'] += f'{f.SITE}: {last:.0f} mins ago\n'
+            reply['embed']['fields'] = [field1, field2]
             await client.send_message(reply, channel_id)
         elif args[1] == 'next':
             params = args[2:]

@@ -37,12 +37,13 @@ class CodeChefFetcher(Fetcher):
             vals = row.find_all('td')
             url = self.BASE_URL + '/' + str(vals[0].string)
             name = str(vals[1].string)
-            fmt = '%Y-%m-%dT%H:%M:%S%z'
-            modify = lambda s: ''.join(s.rsplit(':', 1))
-            # Actually the string format is like so: 2018-09-07T15:00:00+05:30, modify removes the last colon.
-            start = datetime.strptime(modify(vals[2]['data-starttime']), fmt)
+            # The string format is like so: 2018-09-07T15:00:00+05:30
+            # Not caring about timezone for now.
+            # TODO: Care about timezones
+            fmt = '%Y-%m-%dT%H:%M:%S'
+            start = datetime.strptime(vals[2]['data-starttime'].split('+')[0], fmt)
             start = int(start.timestamp())
-            end = datetime.strptime(modify(vals[3]['data-endtime']), fmt)
+            end = datetime.strptime(vals[3]['data-endtime'].split('+')[0], fmt)
             end = int(end.timestamp())
             length = end - start
             self.future_contests.append(Contest(name, self.SITE, url, start, length))

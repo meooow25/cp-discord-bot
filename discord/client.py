@@ -15,18 +15,19 @@ logger = logging.getLogger(__name__)
 class Client:
     API_URL = 'https://discordapp.com/api'
 
-    def __init__(self, token, name='Bot'):
+    def __init__(self, token, name='Bot', activity_name=None, on_message=None):
         self.token = token
         self.name = name
         self.headers = {
             'Authorization': f'Bot {self.token}',
             'User-Agent': self.name,
         }
+        self.activity_name = activity_name
+        self.on_message = on_message
 
         self.user = None
         self.start_time = None
         self.last_seq = None
-        self.on_message = lambda client, data: None
 
     async def run(self):
         resp = await self.request('GET', '/gateway')
@@ -56,10 +57,10 @@ class Client:
     async def handle_message(self, ws, msg):
         msg = json.loads(msg)
         op = msg['op']
-        if msg.get('s', None):
+        if msg.get('s'):
             self.last_seq = msg['s']
-        typ = msg.get('t', None)
-        data = msg.get('d', None)
+        typ = msg.get('t')
+        data = msg.get('d')
         logger.info(f'Received: {op} {typ}')
         if op == d_opcode.HELLO:
             logger.info(data)
@@ -71,17 +72,18 @@ class Client:
                         '$os': platform.platform(terse=1),
                     },
                     'compress': False,
-                    'presence': {
-                        'game': {
-                            'name': 'Check me out!',
-                            'type': 0,
-                        },
-                        'status': 'online',
-                        'since': None,
-                        'afk': False,
-                    }
                 }
             }
+            if self.activity_name:
+                reply['d']['presence'] = {
+                    'game': {
+                        'name': self.activity_name,
+                        'type': 0,
+                    },
+                    'status': 'online',
+                    'since': None,
+                    'afk': False,
+                }
             await ws.send_json(reply)
             asyncio.ensure_future(self.heartbeat(ws, data['heartbeat_interval']))
         elif op == d_opcode.HEARTBEAT_ACK:
@@ -106,7 +108,9 @@ class Client:
             self.user = data['user']
             logger.info(f'Self data: {self.user}')
         elif typ == 'MESSAGE_CREATE':
-            await self.on_message(self, data)
+            if self.on_message:
+                logger.debug('Calling on_message handler')
+                await self.on_message(self, data)
         else:
             # nothing else supported
             pass
