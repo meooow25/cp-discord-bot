@@ -1,4 +1,3 @@
-
 import asyncio
 import json
 import logging
@@ -39,11 +38,11 @@ class Client:
                 async for msg in ws:
                     if msg.type == aiohttp.WSMsgType.ERROR:
                         logger.error(f'ERROR! {msg.data}')
-                        break
+                        raise Exception(f'Websocket error {msg.data}')
                     elif msg.type == aiohttp.WSMsgType.TEXT:
                         await self.handle_message(ws, msg.data)
                     else:
-                        logger.info(f'Unhandled type: {msg.type}, {msg.data}')
+                        logger.warning(f'Unhandled type: {msg.type}, {msg.data}')
 
     async def request(self, method, path, headers=None, json_data=None):
         if headers is None:

@@ -55,7 +55,8 @@ class Bot:
             'embed': {
                 'title': f'*Hello, I am **{self.name}**!*',
                 'description': f'*A half-baked bot made by <@{self.author_id}>\n'
-                               f'Running on Python {platform.python_version()} like a boss*',
+                               f'Written in awesome Python {platform.python_version()}\n'
+                               f'Running on {platform.system()}-{platform.release()} like a boss*',
             },
         }
 

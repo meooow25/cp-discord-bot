@@ -5,6 +5,8 @@ import os
 
 from bot.bot import Bot
 
+logger = logging.getLogger(__name__)
+
 TOKEN = os.environ['TOKEN']
 NAME = 'Bot'
 TRIGGERS = ['.cp']
@@ -13,21 +15,32 @@ AUTHOR = 'author_id'
 ACTIVITY_NAME = 'activity'
 
 
-def main(loglevel):
-    numeric_level = getattr(logging, loglevel.upper(), None)
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--log', default='WARNING')
+    args = parser.parse_args()
+    numeric_level = getattr(logging, args.log.upper(), None)
     if not isinstance(numeric_level, int):
-        raise ValueError('Invalid log level: %s' % loglevel)
+        raise ValueError(f'Invalid log level: {args.log}')
     logging.basicConfig(level=numeric_level)
     bot = Bot(TOKEN, name=NAME, activity_name=ACTIVITY_NAME, author_id=AUTHOR, triggers=TRIGGERS,
               allowed_channels=CHANNELS)
     loop = asyncio.get_event_loop()
-    loop.run_until_complete(bot.run())
-    loop.close()
+    main_task = asyncio.ensure_future(bot.run())
+
+    def cancel_pending_tasks(future):
+        """Main task should never end, error expected"""
+        logger.error('Main task completed with error', future.exception())
+        for task in asyncio.Task.all_tasks():
+            task.cancel()
+        loop.stop()
+
+    main_task.add_done_callback(cancel_pending_tasks)
+    try:
+        loop.run_forever()
+    finally:
+        loop.close()
 
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--log', default='WARNING')
-    args = parser.parse_args()
-    loglevel = vars(args).get('log')
-    main(loglevel)
+    main()
