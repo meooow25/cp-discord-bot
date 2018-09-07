@@ -36,13 +36,17 @@ class Client:
                 self.start_time = time.time()
                 logger.info('Websocket connected')
                 async for msg in ws:
+                    if msg.type == aiohttp.WSMsgType.CLOSE:
+                        logger.error(f'Discord closed the connection: {msg.data}, {msg.extra}')
+                        raise Exception(f'Websocket closed')
                     if msg.type == aiohttp.WSMsgType.ERROR:
-                        logger.error(f'ERROR! {msg.data}')
-                        raise Exception(f'Websocket error {msg.data}')
+                        logger.error(f'Websocket error response: {msg.data}')
+                        raise Exception(f'Websocket error')
                     elif msg.type == aiohttp.WSMsgType.TEXT:
                         await self.handle_message(ws, msg.data)
                     else:
                         logger.warning(f'Unhandled type: {msg.type}, {msg.data}')
+        raise Exception('This should never happen')
 
     async def request(self, method, path, headers=None, json_data=None):
         if headers is None:

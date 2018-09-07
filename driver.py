@@ -9,7 +9,7 @@ logger = logging.getLogger(__name__)
 
 TOKEN = os.environ['TOKEN']
 NAME = 'Bot'
-TRIGGERS = ['.cp']
+TRIGGERS = ['trigger']
 CHANNELS = ['channel_id']
 AUTHOR = 'author_id'
 ACTIVITY_NAME = 'activity'
@@ -28,12 +28,16 @@ def main():
     loop = asyncio.get_event_loop()
     main_task = asyncio.ensure_future(bot.run())
 
+    async def stop():
+        loop.stop()
+
     def cancel_pending_tasks(future):
         """Main task should never end, error expected"""
-        logger.error('Main task completed with error', future.exception())
+        logger.error(f'Main task completed with error: {future.exception()}')
         for task in asyncio.Task.all_tasks():
+            logger.error(f'Cancelling task {task}')
             task.cancel()
-        loop.stop()
+        asyncio.ensure_future(stop())
 
     main_task.add_done_callback(cancel_pending_tasks)
     try:

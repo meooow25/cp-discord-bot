@@ -12,14 +12,6 @@ class CompositeFetcher(Fetcher):
         super().__init__(refresh_interval)
         self.fetchers = fetchers
 
-    def get_future_contests(self, cnt, sites=None):
-        logger.info(f'Composite get_future_contests: {cnt} {sites}')
-        if not sites:
-            return super().get_future_contests(cnt)
-        if cnt == 'all':
-            return [contest for contest in self.future_contests if contest.site in sites]
-        return [contest for contest in self.future_contests if contest.site in sites][:cnt]
-
     async def run(self):
         logger.info('Setting up CompositeFetcher...')
         for fetcher in self.fetchers:
@@ -29,5 +21,5 @@ class CompositeFetcher(Fetcher):
     async def update(self):
         self.future_contests = []
         for fetcher in self.fetchers:
-            self.future_contests += fetcher.get_future_contests('all')
+            self.future_contests += fetcher.future_contests
         self.future_contests.sort()

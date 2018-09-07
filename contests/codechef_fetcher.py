@@ -1,4 +1,3 @@
-
 import logging
 import time
 from datetime import datetime
@@ -37,13 +36,18 @@ class CodeChefFetcher(Fetcher):
             vals = row.find_all('td')
             url = self.BASE_URL + '/' + str(vals[0].string)
             name = str(vals[1].string)
-            # The string format is like so: 2018-09-07T15:00:00+05:30
-            # Not caring about timezone for now.
-            # TODO: Care about timezones
-            fmt = '%Y-%m-%dT%H:%M:%S'
-            start = datetime.strptime(vals[2]['data-starttime'].split('+')[0], fmt)
+
+            # The actual string format is like so: 2018-09-07T15:00:00+05:30
+            # This function removes last colon so that strptime can parse it.
+            def remove_last_colon(s):
+                return ''.join(s.rsplit(':', 1))
+
+            fmt = '%Y-%m-%dT%H:%M:%S%z'
+            start = remove_last_colon(vals[2]['data-starttime'])
+            start = datetime.strptime(start, fmt)
             start = int(start.timestamp())
-            end = datetime.strptime(vals[3]['data-endtime'].split('+')[0], fmt)
+            end = remove_last_colon(vals[3]['data-endtime'])
+            end = datetime.strptime(end, fmt)
             end = int(end.timestamp())
             length = end - start
             self.future_contests.append(Contest(name, self.SITE, url, start, length))
