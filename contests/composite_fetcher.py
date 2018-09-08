@@ -19,6 +19,7 @@ class CompositeFetcher(Fetcher):
         await super().run()
 
     async def update(self):
+        """Overrides update method in Fetcher"""
         self.future_contests = []
         for fetcher in self.fetchers:
             self.future_contests += fetcher.future_contests

@@ -52,13 +52,17 @@ async def info(args, bot, client, data):
     await client.send_message(reply, data['channel_id'])
 
 
-@command(usage='next [cnt] [cc] [cf]',
+@command(usage='next [cnt] [at] [cc] [cf]',
          desc='Displays future contests. If cnt is `all` or an integer, displays next `cnt` contests. '
               'If `cnt` is `day`, displays contests which start within the next 24 hours. If `cnt` is '
-              'missing, it defaults to `1`. Takes optional site filters, where `cc` denotes *CodeChef* '
-              'and `cf` denotes *Codeforces*')
+              'missing, it defaults to `1`. Takes optional site filters, where `at` = AtCoder, `cc` = *CodeChef* '
+              'and `cf` = *Codeforces*')
 async def next(args, bot, client, data):
-    sitemap = {'cc': 'CodeChef', 'cf': 'Codeforces'}
+    sitemap = {
+        'at': 'AtCoder',
+        'cc': 'CodeChef',
+        'cf': 'Codeforces',
+    }
 
     def parse_cnt():
         nonlocal args

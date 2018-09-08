@@ -8,6 +8,7 @@ from .command import Command
 from contests.codeforces_fetcher import CodeforcesFetcher
 from contests.codechef_fetcher import CodeChefFetcher
 from contests.composite_fetcher import CompositeFetcher
+from contests.atcoder_fetcher import AtCoderFetcher
 from discord.client import Client
 
 logger = logging.getLogger(__name__)
@@ -25,7 +26,7 @@ class Bot:
         self.allowed_channels = allowed_channels
 
         self.client = Client(token, name=name, activity_name=activity_name, on_message=self.on_message)
-        self.fetcher = CompositeFetcher([CodeforcesFetcher(), CodeChefFetcher()])
+        self.fetcher = CompositeFetcher([AtCoderFetcher(), CodeChefFetcher(), CodeforcesFetcher()])
         self.command_map = {}
         for attr_name in dir(all_commands):
             attr = getattr(all_commands, attr_name)

@@ -1,5 +1,4 @@
 import logging
-import time
 
 import aiohttp
 
@@ -36,7 +35,7 @@ class CodeforcesFetcher(Fetcher):
         self.future_contests.sort()
         logger.info(f'Updated! {len(self.future_contests)} upcoming')
         logger.debug(f'Fetched contests: {self.future_contests}')
-        self.last_fetched = time.time()
+        self.update_last_fetched()
 
     async def request(self, path, **kwargs):
         logger.debug(f'GET {path} {kwargs}')

@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -38,6 +39,9 @@ class Fetcher:
         await self.update()
         # schedule for future
         asyncio.ensure_future(self.updater_task())
+
+    def update_last_fetched(self):
+        self.last_fetched = time.time()
 
     async def update(self):
         raise NotImplementedError('This method must be overridden')

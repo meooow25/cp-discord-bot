@@ -10,10 +10,10 @@ from .models import Contest
 logger = logging.getLogger(__name__)
 
 
-class CodeChefFetcher(Fetcher):
-    SITE = 'CodeChef'
-    BASE_URL = 'https://wwww.codechef.com'
-    CONTESTS_URL = 'https://www.codechef.com/contests'
+class AtCoderFetcher(Fetcher):
+    SITE = 'AtCoder'
+    BASE_URL = 'https://beta.atcoder.jp'
+    CONTESTS_URL = 'https://beta.atcoder.jp/contests'
 
     def __init__(self, refresh_interval=600):
         super().__init__(refresh_interval)
@@ -27,39 +27,41 @@ class CodeChefFetcher(Fetcher):
         html = await self.request(self.CONTESTS_URL)
         soup = BeautifulSoup(html, 'lxml')
 
-        title = soup.find(text='Future Contests')
+        title = soup.find(text='Upcoming Contests')
         if title is None:
             self.future_contests = []
             logger.info(f'{self.SITE}: No future contests')
             self.update_last_fetched()
             return
 
-        # Assuming table has > 0 entries if "Future Contests" title is present
-        h3 = title.parent
-        newline = h3.next_sibling
+        # Assuming table has > 0 entries if "Upcoming Contests" title is present
+        h4 = title.parent
+        newline = h4.next_sibling
         div = newline.next_sibling
         tbody = div.find('tbody')
         rows = tbody.find_all('tr')
         self.future_contests = []
         for row in rows:
             vals = row.find_all('td')
-            url = self.BASE_URL + '/' + str(vals[0].string)
-            name = str(vals[1].string)
 
-            # The actual string format is like so: 2018-09-07T15:00:00+05:30
-            # This function removes last colon so that strptime can parse it.
-            def remove_last_colon(s):
-                return ''.join(s.rsplit(':', 1))
-
-            fmt = '%Y-%m-%dT%H:%M:%S%z'
-            start = remove_last_colon(vals[2]['data-starttime'])
+            time_tag = vals[0].find('time')
+            # The string format is like so: 2018-09-08 21:00:00+0900
+            fmt = '%Y-%m-%d %H:%M:%S%z'
+            start = str(time_tag.string)
             start = datetime.strptime(start, fmt)
             start = int(start.timestamp())
-            end = remove_last_colon(vals[3]['data-endtime'])
-            end = datetime.strptime(end, fmt)
-            end = int(end.timestamp())
-            length = end - start
+
+            name_tag = vals[1].find('a')
+            url = self.BASE_URL + name_tag['href']
+            name = str(name_tag.string)
+
+            # The duration format is like so: 01:40
+            duration_str = str(vals[2].string)
+            hrs, mins = duration_str.split(':')
+            length = int(hrs) * 60 * 60 + int(mins) * 60
+
             self.future_contests.append(Contest(name, self.SITE, url, start, length))
+
         self.future_contests.sort()
         logger.info(f'Updated! {len(self.future_contests)} upcoming')
         logger.debug(f'Fetched contests: {self.future_contests}')
