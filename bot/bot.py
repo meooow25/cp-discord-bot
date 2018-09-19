@@ -15,17 +15,18 @@ logger = logging.getLogger(__name__)
 
 
 class Bot:
+    NAME = 'CPBot'
+    GITHUB_URL = 'https://github.com/meooow25/cp-discord-bot'
     MSG_MAX_CONTESTS = 6
     # TODO: Support separate time zones per channel or server
     TIME_ZONE = timezone(timedelta(hours=5, minutes=30))
 
-    def __init__(self, token, name='Bot', activity_name=None, author_id=None, triggers=None, allowed_channels=None):
-        self.name = name
+    def __init__(self, token, activity_name=None, author_id=None, triggers=None, allowed_channels=None):
         self.author_id = author_id
         self.triggers = triggers
         self.allowed_channels = allowed_channels
 
-        self.client = Client(token, name=name, activity_name=activity_name, on_message=self.on_message)
+        self.client = Client(token, name=self.NAME, activity_name=activity_name, on_message=self.on_message)
         self.fetcher = CompositeFetcher([AtCoderFetcher(), CodeChefFetcher(), CodeforcesFetcher()])
         self.command_map = {}
         for attr_name in dir(all_commands):
@@ -35,6 +36,7 @@ class Bot:
                 self.command_map[command.name] = command
         logger.info(f'Loaded commands: {self.command_map.keys()}')
 
+        # Help message begin.
         self.help_message = {}
         if not triggers:
             self.help_message['content'] = '*@mention me to activate me.*\n'
@@ -49,12 +51,26 @@ class Bot:
         }
         self.help_message['embed']['fields'].sort(key=itemgetter('name'))
 
+        # Info message begin.
         self.info_message = {
             'embed': {
-                'title': f'*Hello, I am **{self.name}**!*',
+                'title': f'*Hello, I am **{self.NAME}**!*',
                 'description': f'*A half-baked bot made by <@{self.author_id}>\n'
-                               f'Written in awesome Python {platform.python_version()}\n'
-                               f'Running on {platform.system()}-{platform.release()} like a boss*',
+                               f'Written in awesome Python 3.7\n'
+                               f'Check me out on [Github]({self.GITHUB_URL})!*'
+            },
+        }
+
+        # Status message begin.
+        self.status_message = {
+            'embed': {
+                'fields': [
+                    {
+                        'name': 'System',
+                        'value': f'Python version: {platform.python_version()}\n'
+                                 f'OS and version: {platform.system()}-{platform.release()}'
+                    }
+                ],
             },
         }
 

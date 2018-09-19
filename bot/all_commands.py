@@ -34,21 +34,7 @@ async def help(args, bot, client, data):
 @command(desc='Displays bot info')
 async def info(args, bot, client, data):
     assert_arglen(args, 0)
-    reply = dict(bot.info_message)
-    now = time.time()
-    uptime = (now - client.start_time) / 3600
-    field1 = {
-        'name': 'Bot uptime:',
-        'value': f'Online since {uptime:.1f} hrs ago'
-    }
-    field2 = {
-        'name': 'Last updated:',
-        'value': '',
-    }
-    for f in bot.fetcher.fetchers:
-        last = (now - f.last_fetched) / 60
-        field2['value'] += f'{f.SITE}: {last:.0f} mins ago\n'
-    reply['embed']['fields'] = [field1, field2]
+    reply = bot.info_message
     await client.send_message(reply, data['channel_id'])
 
 
@@ -64,27 +50,31 @@ async def next(args, bot, client, data):
         'cf': 'Codeforces',
     }
 
-    def parse_cnt():
-        nonlocal args
-        if not args:
-            return 1
-        if args[0] in ['all', 'day']:
-            cnt = args[0]
-            args = args[1:]
-            return cnt
-        if args[0] in sitemap:
-            return 1
-        try:
-            cnt = int(args[0])
-            assert_true(cnt > 0)
-            args = args[1:]
-            return cnt
-        except ValueError:
-            raise Command.IncorrectUsageException()
+    opt = set()
+    rem = set()
+    for arg in args:
+        if arg in sitemap:
+            opt.add(arg)
+        else:
+            rem.add(arg)
 
-    cnt = parse_cnt()
-    assert_true(all(arg in sitemap for arg in args))
-    sites = [sitemap[arg] for arg in args]
+    if len(rem) == 0:
+        cnt = 1
+    elif len(rem) == 1:
+        cnt = rem.pop()
+        if cnt == 'all' or cnt == 'day':
+            pass
+        else:
+            try:
+                cnt = int(cnt)
+                assert_true(cnt > 0)
+            except ValueError:
+                raise Command.IncorrectUsageException()
+    else:
+        raise Command.IncorrectUsageException()
+
+    sites = [sitemap[arg] for arg in opt]
+    sites.sort()
     if cnt == 'day':
         start_max = datetime.now(timezone.utc).timestamp() + timedelta(days=1).total_seconds()
         future_contests = bot.fetcher.get_future_contests_before(start_max, sites)
@@ -155,8 +145,22 @@ def create_message_from_contests(contests, cnt, sites, max_contests, time_zone):
     return message
 
 
-@command(desc='Teach me sensei')
-async def teachmesensei(args, bot, client, data):
+@command(desc='Displays bot status')
+async def status(args, bot, client, data):
     assert_arglen(args, 0)
-    reply = {'content': '*git gud*'}
+    reply = dict(bot.status_message)
+    now = time.time()
+    uptime = (now - client.start_time) / 3600
+    field1 = {
+        'name': 'Bot Uptime',
+        'value': f'Online since {uptime:.1f} hrs ago'
+    }
+    field2 = {
+        'name': 'Last Updated',
+        'value': '',
+    }
+    for f in bot.fetcher.fetchers:
+        last = (now - f.last_fetched) / 60
+        field2['value'] += f'{f.SITE}: {last:.0f} mins ago\n'
+    reply['embed']['fields'] += [field1, field2]
     await client.send_message(reply, data['channel_id'])

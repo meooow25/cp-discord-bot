@@ -8,7 +8,6 @@ from bot.bot import Bot
 logger = logging.getLogger(__name__)
 
 TOKEN = os.environ['TOKEN']
-NAME = 'Bot'
 TRIGGERS = ['trigger']
 CHANNELS = ['channel_id']
 AUTHOR = 'author_id'
@@ -23,8 +22,7 @@ def main():
     if not isinstance(numeric_level, int):
         raise ValueError(f'Invalid log level: {args.log}')
     logging.basicConfig(level=numeric_level)
-    bot = Bot(TOKEN, name=NAME, activity_name=ACTIVITY_NAME, author_id=AUTHOR, triggers=TRIGGERS,
-              allowed_channels=CHANNELS)
+    bot = Bot(TOKEN, activity_name=ACTIVITY_NAME, author_id=AUTHOR, triggers=TRIGGERS, allowed_channels=CHANNELS)
     loop = asyncio.get_event_loop()
     main_task = asyncio.ensure_future(bot.run())
 

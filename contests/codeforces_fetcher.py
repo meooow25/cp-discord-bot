@@ -1,11 +1,7 @@
-import logging
-
 import aiohttp
 
 from .fetcher import Fetcher
 from .models import Contest
-
-logger = logging.getLogger(__name__)
 
 
 class CodeforcesFetcher(Fetcher):
@@ -15,10 +11,6 @@ class CodeforcesFetcher(Fetcher):
 
     def __init__(self, refresh_interval=600):
         super().__init__(refresh_interval)
-
-    async def run(self):
-        logger.info(f'Setting up {self.SITE} fetcher...')
-        await super().run()
 
     async def update(self):
         """Overrides update method in Fetcher"""
@@ -33,12 +25,12 @@ class CodeforcesFetcher(Fetcher):
         # TODO: Consider how to handle contests with missing start
         self.future_contests = [contest for contest in self.future_contests if contest.start is not None]
         self.future_contests.sort()
-        logger.info(f'Updated! {len(self.future_contests)} upcoming')
-        logger.debug(f'Fetched contests: {self.future_contests}')
+        self.logger.info(f'Updated! {len(self.future_contests)} upcoming')
+        self.logger.debug(f'Fetched contests: {self.future_contests}')
         self.update_last_fetched()
 
     async def request(self, path, **kwargs):
-        logger.debug(f'GET {path} {kwargs}')
+        self.logger.debug(f'GET {path} {kwargs}')
         async with aiohttp.request('GET', f'{self.API_URL}{path}', params=kwargs) as response:
             response.raise_for_status()
             return await response.json()
