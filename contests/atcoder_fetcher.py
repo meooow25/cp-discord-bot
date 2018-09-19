@@ -25,7 +25,8 @@ class AtCoderFetcher(Fetcher):
     async def update(self):
         """Overrides update method in Fetcher"""
         html = await self.request(self.CONTESTS_URL)
-        soup = BeautifulSoup(html, 'lxml')
+        # TODO: Fix bs4 not finding lxml in Python 3.7
+        soup = BeautifulSoup(html, 'html.parser')
 
         title = soup.find(text='Upcoming Contests')
         if title is None:

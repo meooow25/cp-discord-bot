@@ -35,10 +35,10 @@ class Fetcher:
         return list(filtered_by_start)
 
     async def run(self):
-        # initial fetch
+        # Initial fetch.
         await self.update()
-        # schedule for future
-        asyncio.ensure_future(self.updater_task())
+        # Schedule for future
+        asyncio.create_task(self.updater_task())
 
     def update_last_fetched(self):
         self.last_fetched = time.time()

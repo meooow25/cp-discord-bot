@@ -25,25 +25,10 @@ def main():
     logging.basicConfig(level=numeric_level)
     bot = Bot(TOKEN, name=NAME, activity_name=ACTIVITY_NAME, author_id=AUTHOR, triggers=TRIGGERS,
               allowed_channels=CHANNELS)
-    loop = asyncio.get_event_loop()
-    main_task = asyncio.ensure_future(bot.run())
-
-    async def stop():
-        loop.stop()
-
-    def cancel_pending_tasks(future):
-        """Main task should never end, error expected"""
-        logger.error(f'Main task completed with error: {future.exception()}')
-        for task in asyncio.Task.all_tasks():
-            logger.error(f'Cancelling task {task}')
-            task.cancel()
-        asyncio.ensure_future(stop())
-
-    main_task.add_done_callback(cancel_pending_tasks)
     try:
-        loop.run_forever()
-    finally:
-        loop.close()
+        asyncio.run(bot.run())
+    except Exception as ex:
+        logger.critical(f'Exception: {ex}')
 
 
 if __name__ == '__main__':
