@@ -88,7 +88,7 @@ class Client:
                     'afk': False,
                 }
             await ws.send_json(reply)
-            asyncio.ensure_future(self.heartbeat(ws, data['heartbeat_interval']))
+            asyncio.create_task(self.heartbeat(ws, data['heartbeat_interval']))
         elif op == d_opcode.HEARTBEAT_ACK:
             logger.info('Heartbeat-ack received')
         elif op == d_opcode.DISPATCH:

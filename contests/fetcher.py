@@ -53,7 +53,7 @@ class Fetcher:
         self.logger.info('Setting up fetcher...')
         # Initial fetch.
         await self.update()
-        # Schedule for future
+        # Schedule for future.
         asyncio.ensure_future(self.updater_task())
 
     def update_last_fetched(self):
