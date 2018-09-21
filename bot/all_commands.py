@@ -1,3 +1,4 @@
+import copy
 import logging
 import time
 from datetime import datetime, timezone, timedelta
@@ -41,8 +42,8 @@ async def info(args, bot, client, data):
 @command(usage='next [cnt] [at] [cc] [cf]',
          desc='Displays future contests. If cnt is `all` or an integer, displays next `cnt` contests. '
               'If `cnt` is `day`, displays contests which start within the next 24 hours. If `cnt` is '
-              'missing, it defaults to `1`. Takes optional site filters, where `at` = AtCoder, `cc` = *CodeChef* '
-              'and `cf` = *Codeforces*')
+              'missing, it defaults to `1`. Takes optional site filters, where `at` = *AtCoder*, `cc` '
+              '= *CodeChef* and `cf` = *Codeforces*')
 async def next(args, bot, client, data):
     sitemap = {
         'at': 'AtCoder',
@@ -148,7 +149,7 @@ def create_message_from_contests(contests, cnt, sites, max_contests, time_zone):
 @command(desc='Displays bot status')
 async def status(args, bot, client, data):
     assert_arglen(args, 0)
-    reply = dict(bot.status_message)
+    reply = copy.deepcopy(bot.status_message)
     now = time.time()
     uptime = (now - client.start_time) / 3600
     field1 = {

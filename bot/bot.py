@@ -46,30 +46,31 @@ class Bot:
             'title': 'Supported commands:',
             'fields': [{
                 'name': f'`{command.usage}`',
-                'value': command.desc
+                'value': command.desc,
             } for command in self.command_map.values()]
         }
         self.help_message['embed']['fields'].sort(key=itemgetter('name'))
 
         # Info message begin.
         self.info_message = {
+            'content': f'*Hello, I am **{self.NAME}**!*',
             'embed': {
-                'title': f'*Hello, I am **{self.NAME}**!*',
-                'description': f'*A half-baked bot made by <@{self.author_id}>\n'
+                'description': f'A half-baked bot made by <@{self.author_id}>\n'
                                f'Written in awesome Python 3.7\n'
-                               f'Check me out on [Github]({self.GITHUB_URL})!*'
+                               f'Check me out on [Github]({self.GITHUB_URL})!',
             },
         }
 
         # Status message begin.
         self.status_message = {
+            'content': '*Status info*',
             'embed': {
                 'fields': [
                     {
                         'name': 'System',
                         'value': f'Python version: {platform.python_version()}\n'
-                                 f'OS and version: {platform.system()}-{platform.release()}'
-                    }
+                                 f'OS and version: {platform.system()}-{platform.release()}',
+                    },
                 ],
             },
         }
