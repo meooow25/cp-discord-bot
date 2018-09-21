@@ -1,9 +1,4 @@
-
-import logging
-
 from .fetcher import Fetcher
-
-logger = logging.getLogger(__name__)
 
 
 class CompositeFetcher(Fetcher):
@@ -13,7 +8,7 @@ class CompositeFetcher(Fetcher):
         self.fetchers = fetchers
 
     async def run(self):
-        logger.info('Setting up CompositeFetcher...')
+        self.logger.info('Setting up fetchers of CompositeFetcher...')
         for fetcher in self.fetchers:
             await fetcher.run()
         await super().run()

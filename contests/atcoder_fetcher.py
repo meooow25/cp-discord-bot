@@ -1,4 +1,3 @@
-import logging
 from datetime import datetime
 
 import aiohttp
@@ -6,8 +5,6 @@ from bs4 import BeautifulSoup
 
 from .fetcher import Fetcher
 from .models import Contest
-
-logger = logging.getLogger(__name__)
 
 
 class AtCoderFetcher(Fetcher):
@@ -18,10 +15,6 @@ class AtCoderFetcher(Fetcher):
     def __init__(self, refresh_interval=600):
         super().__init__(refresh_interval)
 
-    async def run(self):
-        logger.info(f'Setting up {self.SITE} fetcher...')
-        await super().run()
-
     async def update(self):
         """Overrides update method in Fetcher"""
         html = await self.request(self.CONTESTS_URL)
@@ -31,7 +24,7 @@ class AtCoderFetcher(Fetcher):
         title = soup.find(text='Upcoming Contests')
         if title is None:
             self.future_contests = []
-            logger.info(f'{self.SITE}: No future contests')
+            self.logger.info('No future contests')
             self.update_last_fetched()
             return
 
@@ -64,13 +57,13 @@ class AtCoderFetcher(Fetcher):
             self.future_contests.append(Contest(name, self.SITE, url, start, length))
 
         self.future_contests.sort()
-        logger.info(f'Updated! {len(self.future_contests)} upcoming')
-        logger.debug(f'Fetched contests: {self.future_contests}')
+        self.logger.info(f'Updated! {len(self.future_contests)} upcoming')
+        self.logger.debug(f'Fetched contests: {self.future_contests}')
         self.update_last_fetched()
 
     async def request(self, path):
         headers = {'User-Agent': f'aiohttp/{aiohttp.__version__}'}
-        logger.debug(f'GET {path} {headers}')
+        self.logger.debug(f'GET {path} {headers}')
         async with aiohttp.request('GET', f'{path}', headers=headers) as response:
             response.raise_for_status()
             return await response.text()
