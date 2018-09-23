@@ -4,13 +4,41 @@ import time
 from datetime import datetime, timezone
 
 
-class Fetcher:
+class Site:
+    class SiteVars:
+        def __init__(self, **kwargs):
+            self.__dict__.update(kwargs)
 
-    def __init__(self, refresh_interval=600):
-        self.future_contests = None
+    def __init__(self, contest_fetcher, refresh_interval):
+        self.contest_fetcher = contest_fetcher
         self.refresh_interval = refresh_interval
-        self.last_fetched = None
+        self.future_contests = None
+        self.contests_last_fetched = None
         self.logger = logging.getLogger(self.__class__.__qualname__)
+
+    async def run(self):
+        self.logger.info('Setting up site...')
+        # Initial fetch.
+        await self.update_contests()
+        # Schedule for future.
+        asyncio.create_task(self._contest_updater_task())
+
+    async def update_contests(self):
+        self.future_contests = await self.contest_fetcher.fetch()
+        self.logger.info(f'Updated! {len(self.future_contests)} upcoming')
+        self.logger.debug(f'Fetched contests: {self.future_contests}')
+        self.contests_last_fetched = time.time()
+
+    async def _contest_updater_task(self):
+        while True:
+            try:
+                await asyncio.sleep(self.refresh_interval)
+                await self.update_contests()
+            except asyncio.CancelledError:
+                self.logger.info('Received CancelledError, stopping task')
+                break
+            except Exception as ex:
+                self.logger.warning(f'Exception in fetching: {ex}, continuing regardless')
 
     @staticmethod
     def filter_by_site(sites):
@@ -49,26 +77,11 @@ class Fetcher:
         filtered_by_start = filter(self.filter_by_start_max(start_max), filtered_by_site)
         return list(filtered_by_start)
 
-    async def run(self):
-        self.logger.info('Setting up fetcher...')
-        # Initial fetch.
-        await self.update()
-        # Schedule for future.
-        asyncio.ensure_future(self.updater_task())
 
-    def update_last_fetched(self):
-        self.last_fetched = time.time()
+class ContestFetcher:
+    def __init__(self, site_vars):
+        self.site_vars = site_vars
+        self.logger = logging.getLogger(self.__class__.__qualname__)
 
-    async def update(self):
-        raise NotImplementedError('This method must be overridden')
-
-    async def updater_task(self):
-        while True:
-            try:
-                await asyncio.sleep(self.refresh_interval)
-                await self.update()
-            except asyncio.CancelledError:
-                self.logger.info('Received CancelledError, stopping task')
-                break
-            except Exception as ex:
-                self.logger.warning(f'Exception in fetching: {ex}, continuing regardless')
+    async def fetch(self):
+        raise NotImplementedError(f'{self.__class__}: This method must be overridden')

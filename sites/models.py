@@ -19,5 +19,3 @@ class Contest:
 
     def __repr__(self):
         return 'Contest' + str((self.name, self.site, self.url, self.start, self.length))
-
-    __str__ = __repr__

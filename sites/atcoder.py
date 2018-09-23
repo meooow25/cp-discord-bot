@@ -3,30 +3,41 @@ from datetime import datetime
 import aiohttp
 from bs4 import BeautifulSoup
 
-from .fetcher import Fetcher
+from .competitive_programming_site import Site, ContestFetcher
 from .models import Contest
 
 
-class AtCoderFetcher(Fetcher):
-    SITE = 'AtCoder'
-    BASE_URL = 'https://beta.atcoder.jp'
-    CONTESTS_URL = 'https://beta.atcoder.jp/contests'
+class AtCoder(Site):
+    SITE_VARS = Site.SiteVars(
+        name='AtCoder',
+        base_url='https://beta.atcoder.jp',
+        contests_path='/contests'
+    )
 
-    def __init__(self, refresh_interval=600):
-        super().__init__(refresh_interval)
+    def __init__(self, contest_fetcher=None, refresh_interval=600):
+        if contest_fetcher is None:
+            contest_fetcher = AtCoderContestFetcher(self.SITE_VARS)
+        super().__init__(contest_fetcher, refresh_interval)
 
-    async def update(self):
-        """Overrides update method in Fetcher"""
-        html = await self.request(self.CONTESTS_URL)
+    def __repr__(self):
+        return self.SITE_VARS.name
+
+
+class AtCoderContestFetcher(ContestFetcher):
+
+    def __init__(self, site_vars):
+        super().__init__(site_vars)
+
+    async def fetch(self):
+        """Overrides fetch method in ContestFetcher"""
+        html = await self._request(self.site_vars.contests_path)
         # TODO: Fix bs4 not finding lxml in Python 3.7
         soup = BeautifulSoup(html, 'html.parser')
 
         title = soup.find(text='Upcoming Contests')
         if title is None:
-            self.future_contests = []
             self.logger.info('No future contests')
-            self.update_last_fetched()
-            return
+            return []
 
         # Assuming table has > 0 entries if "Upcoming Contests" title is present
         h4 = title.parent
@@ -34,7 +45,7 @@ class AtCoderFetcher(Fetcher):
         div = newline.next_sibling
         tbody = div.find('tbody')
         rows = tbody.find_all('tr')
-        self.future_contests = []
+        future_contests = []
         for row in rows:
             vals = row.find_all('td')
 
@@ -46,7 +57,7 @@ class AtCoderFetcher(Fetcher):
             start = int(start.timestamp())
 
             name_tag = vals[1].find('a')
-            url = self.BASE_URL + name_tag['href']
+            url = self.site_vars.base_url + name_tag['href']
             name = str(name_tag.string)
 
             # The duration format is like so: 01:40
@@ -54,16 +65,15 @@ class AtCoderFetcher(Fetcher):
             hrs, mins = duration_str.split(':')
             length = int(hrs) * 60 * 60 + int(mins) * 60
 
-            self.future_contests.append(Contest(name, self.SITE, url, start, length))
+            future_contests.append(Contest(name, self.site_vars.name, url, start, length))
 
-        self.future_contests.sort()
-        self.logger.info(f'Updated! {len(self.future_contests)} upcoming')
-        self.logger.debug(f'Fetched contests: {self.future_contests}')
-        self.update_last_fetched()
+        future_contests.sort()
+        return future_contests
 
-    async def request(self, path):
+    async def _request(self, path):
+        path = self.site_vars.base_url + path
         headers = {'User-Agent': f'aiohttp/{aiohttp.__version__}'}
         self.logger.debug(f'GET {path} {headers}')
-        async with aiohttp.request('GET', f'{path}', headers=headers) as response:
+        async with aiohttp.request('GET', path, headers=headers) as response:
             response.raise_for_status()
             return await response.text()

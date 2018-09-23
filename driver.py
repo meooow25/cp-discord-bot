@@ -10,7 +10,6 @@ logger = logging.getLogger(__name__)
 TOKEN = os.environ['TOKEN']
 TRIGGERS = ['trigger']
 CHANNELS = ['channel_id']
-AUTHOR = 'author_id'
 ACTIVITY_NAME = 'activity'
 
 
@@ -22,12 +21,12 @@ def main():
     if not isinstance(numeric_level, int):
         raise ValueError(f'Invalid log level: {args.log}')
     logging.basicConfig(format='{levelname}:{name}:{message}', style='{', level=numeric_level)
-    bot = Bot(TOKEN, activity_name=ACTIVITY_NAME, author_id=AUTHOR, triggers=TRIGGERS, allowed_channels=CHANNELS)
+    bot = Bot(TOKEN, activity_name=ACTIVITY_NAME, triggers=TRIGGERS, allowed_channels=CHANNELS)
     try:
         asyncio.run(bot.run())
     except Exception as ex:
         logger.critical(f'Exception: {ex}')
 
-        
+
 if __name__ == '__main__':
     main()

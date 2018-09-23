@@ -78,10 +78,10 @@ async def next(args, bot, client, data):
     sites.sort()
     if cnt == 'day':
         start_max = datetime.now(timezone.utc).timestamp() + timedelta(days=1).total_seconds()
-        future_contests = bot.fetcher.get_future_contests_before(start_max, sites)
+        future_contests = bot.composite_site.get_future_contests_before(start_max, sites)
         logger.info(f'{len(future_contests)} future contests fetched before {start_max}')
     else:
-        future_contests = bot.fetcher.get_future_contests_cnt(cnt, sites)
+        future_contests = bot.composite_site.get_future_contests_cnt(cnt, sites)
         logger.info(f'{len(future_contests)} future contests fetched out of {cnt}')
 
     reply = create_message_from_contests(future_contests, cnt, sites, bot.MSG_MAX_CONTESTS, bot.TIME_ZONE)
@@ -160,8 +160,8 @@ async def status(args, bot, client, data):
         'name': 'Last Updated',
         'value': '',
     }
-    for f in bot.fetcher.fetchers:
-        last = (now - f.last_fetched) / 60
-        field2['value'] += f'{f.SITE}: {last:.0f} mins ago\n'
+    for site in bot.composite_site.sites:
+        last = (now - site.contests_last_fetched) / 60
+        field2['value'] += f'{site.SITE_VARS.name}: {last:.0f} mins ago\n'
     reply['embed']['fields'] += [field1, field2]
     await client.send_message(reply, data['channel_id'])
