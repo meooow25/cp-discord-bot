@@ -3,35 +3,33 @@ from datetime import datetime
 import aiohttp
 from bs4 import BeautifulSoup
 
-from .competitive_programming_site import Site, ContestFetcher
-from .models import Contest
+from .competitive_programming_site import Site
+from .models import Contest, Profile
 
 
 class AtCoder(Site):
-    SITE_VARS = Site.SiteVars(
-        name='AtCoder',
-        base_url='https://beta.atcoder.jp',
-        contests_path='/contests'
-    )
+    NAME = 'AtCoder'
+    BASE_URL = 'https://beta.atcoder.jp'
+    CONTESTS_PATH = '/contests'
+    USERS_PATH = '/users'
 
-    def __init__(self, contest_fetcher=None, refresh_interval=600):
-        if contest_fetcher is None:
-            contest_fetcher = AtCoderContestFetcher(self.SITE_VARS)
-        super().__init__(contest_fetcher, refresh_interval)
+    def __init__(self, refresh_interval=600):
+        super().__init__(refresh_interval)
 
     def __repr__(self):
-        return self.SITE_VARS.name
+        return self.NAME
 
+    async def _request(self, path):
+        path = self.BASE_URL + path
+        headers = {'User-Agent': f'aiohttp/{aiohttp.__version__}'}
+        self.logger.debug(f'GET {path} {headers}')
+        async with aiohttp.request('GET', path, headers=headers) as response:
+            response.raise_for_status()
+            return await response.text()
 
-class AtCoderContestFetcher(ContestFetcher):
-
-    def __init__(self, site_vars):
-        super().__init__(site_vars)
-
-    async def fetch(self):
-        """Overrides fetch method in ContestFetcher"""
-        html = await self._request(self.site_vars.contests_path)
-        # TODO: Fix bs4 not finding lxml in Python 3.7
+    async def fetch_future_contests(self):
+        """Overrides method in Site"""
+        html = await self._request(self.CONTESTS_PATH)
         soup = BeautifulSoup(html, 'html.parser')
 
         title = soup.find(text='Upcoming Contests')
@@ -57,7 +55,7 @@ class AtCoderContestFetcher(ContestFetcher):
             start = int(start.timestamp())
 
             name_tag = vals[1].find('a')
-            url = self.site_vars.base_url + name_tag['href']
+            url = self.BASE_URL + name_tag['href']
             name = str(name_tag.string)
 
             # The duration format is like so: 01:40
@@ -65,15 +63,31 @@ class AtCoderContestFetcher(ContestFetcher):
             hrs, mins = duration_str.split(':')
             length = int(hrs) * 60 * 60 + int(mins) * 60
 
-            future_contests.append(Contest(name, self.site_vars.name, url, start, length))
+            future_contests.append(Contest(name, self.NAME, url, start, length))
 
         future_contests.sort()
         return future_contests
 
-    async def _request(self, path):
-        path = self.site_vars.base_url + path
-        headers = {'User-Agent': f'aiohttp/{aiohttp.__version__}'}
-        self.logger.debug(f'GET {path} {headers}')
-        async with aiohttp.request('GET', path, headers=headers) as response:
-            response.raise_for_status()
-            return await response.text()
+    async def fetch_profile(self, handle):
+        path = self.USERS_PATH + '/' + handle
+        try:
+            html = await self._request(path)
+        except aiohttp.ClientResponseError as err:
+            if err.status == 404:
+                # User not found.
+                return None
+            raise
+
+        soup = BeautifulSoup(html, 'html.parser')
+
+        # No option of real name on AtCoder.
+        name = None
+
+        rating_heading = soup.find('th', text='Rating')
+        if rating_heading is None:
+            # User is unrated.
+            rating = None
+        else:
+            rating_tag = rating_heading.next_sibling.span
+            rating = int(rating_tag.string)
+        return Profile(handle, self.NAME, name, rating)

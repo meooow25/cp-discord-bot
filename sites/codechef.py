@@ -3,35 +3,33 @@ from datetime import datetime
 import aiohttp
 from bs4 import BeautifulSoup
 
-from .competitive_programming_site import Site, ContestFetcher
-from .models import Contest
+from .competitive_programming_site import Site
+from .models import Contest, Profile
 
 
 class CodeChef(Site):
-    SITE_VARS = Site.SiteVars(
-        name='CodeChef',
-        base_url='https://wwww.codechef.com',
-        contests_path='/contests'
-    )
+    NAME = 'CodeChef'
+    BASE_URL = 'https://wwww.codechef.com'
+    CONTESTS_PATH = '/contests'
+    USERS_PATH = '/users'
 
-    def __init__(self, contest_fetcher=None, refresh_interval=600):
-        if contest_fetcher is None:
-            contest_fetcher = CodeChefContestFetcher(self.SITE_VARS)
-        super().__init__(contest_fetcher, refresh_interval)
+    def __init__(self, refresh_interval=600):
+        super().__init__(refresh_interval)
 
     def __repr__(self):
-        return self.SITE_VARS.name
+        return self.NAME
 
+    async def _request(self, path):
+        path = self.BASE_URL + path
+        headers = {'User-Agent': f'aiohttp/{aiohttp.__version__}'}
+        self.logger.debug(f'GET {path} {headers}')
+        async with aiohttp.request('GET', path, headers=headers) as response:
+            response.raise_for_status()
+            return await response.text()
 
-class CodeChefContestFetcher(ContestFetcher):
-
-    def __init__(self, site_vars):
-        super().__init__(site_vars)
-
-    async def fetch(self):
-        """Overrides fetch method in ContestFetcher"""
-        html = await self._request(self.site_vars.contests_path)
-        # TODO: Fix bs4 not finding lxml in Python 3.7
+    async def fetch_future_contests(self):
+        """Overrides method in Site"""
+        html = await self._request(self.CONTESTS_PATH)
         soup = BeautifulSoup(html, 'html.parser')
 
         title = soup.find(text='Future Contests')
@@ -48,7 +46,7 @@ class CodeChefContestFetcher(ContestFetcher):
         future_contests = []
         for row in rows:
             vals = row.find_all('td')
-            url = self.site_vars.base_url + '/' + str(vals[0].string)
+            url = self.BASE_URL + '/' + str(vals[0].string)
             name = str(vals[1].string)
 
             # The actual string format is like so: 2018-09-07T15:00:00+05:30
@@ -64,15 +62,29 @@ class CodeChefContestFetcher(ContestFetcher):
             end = datetime.strptime(end, fmt)
             end = int(end.timestamp())
             length = end - start
-            future_contests.append(Contest(name, self.site_vars.name, url, start, length))
+            future_contests.append(Contest(name, self.NAME, url, start, length))
 
         future_contests.sort()
         return future_contests
 
-    async def _request(self, path):
-        path = self.site_vars.base_url + path
-        headers = {'User-Agent': f'aiohttp/{aiohttp.__version__}'}
-        self.logger.debug(f'GET {path} {headers}')
-        async with aiohttp.request('GET', path, headers=headers) as response:
-            response.raise_for_status()
-            return await response.text()
+    async def fetch_profile(self, handle):
+        path = self.USERS_PATH + '/' + handle
+        try:
+            html = await self._request(path)
+        except aiohttp.ClientResponseError as err:
+            if err.status == 404:
+                # User not found.
+                return None
+            raise
+
+        soup = BeautifulSoup(html, 'html.parser')
+
+        name_tag = soup.find('div', class_='user-details-container').header.h2
+        name = str(name_tag.string)
+
+        rating_tag = soup.find('div', class_='rating-number')
+        rating = int(rating_tag.string)
+        if rating == 0:
+            # User is either unrated or truly terrible at CP, assume former.
+            rating = None
+        return Profile(handle, self.NAME, name, rating)

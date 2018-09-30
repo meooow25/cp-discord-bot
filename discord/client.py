@@ -14,7 +14,7 @@ logger = logging.getLogger(__name__)
 class Client:
     API_URL = 'https://discordapp.com/api'
 
-    def __init__(self, token, name='Bot', activity_name=None, on_message=None):
+    def __init__(self, token, name='Bot', activity_name=None):
         self.token = token
         self.name = name
         self.headers = {
@@ -22,8 +22,8 @@ class Client:
             'User-Agent': self.name,
         }
         self.activity_name = activity_name
-        self.on_message = on_message
 
+        self.on_message = None
         self.user = None
         self.start_time = None
         self.last_seq = None
@@ -113,7 +113,8 @@ class Client:
         elif typ == 'MESSAGE_CREATE':
             if self.on_message:
                 logger.debug('Calling on_message handler')
-                await self.on_message(self, data)
+                # TODO: Replies to any singe channel should not be out of order.
+                asyncio.create_task(self.on_message(self, data))
         else:
             # nothing else supported
             pass
@@ -121,3 +122,7 @@ class Client:
     async def send_message(self, message, channel_id):
         logger.info(f'Replying to channel {channel_id}')
         await self.request('POST', f'/channels/{channel_id}/messages', json_data=message)
+
+    async def get_channel(self, channel_id):
+        logger.info(f'Getting channel with id: {channel_id}')
+        return await self.request('GET', f'/channels/{channel_id}')

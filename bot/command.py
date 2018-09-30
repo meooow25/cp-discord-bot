@@ -2,11 +2,12 @@ class Command:
     class IncorrectUsageException(Exception):
         pass
 
-    def __init__(self, func, name=None, usage=None, desc=None):
+    def __init__(self, func, name=None, usage=None, desc=None, is_test_feature=False):
         self.func = func
         self.name = func.__name__ if name is None else name
         self.usage = func.__name__ if usage is None else usage
         self.desc = func.__name__ if desc is None else desc
+        self.is_test_feature = is_test_feature
 
     async def execute(self, *args, **kwargs):
         await self.func(*args, **kwargs)
@@ -17,3 +18,13 @@ def command(func=None, **kwargs):
     if func is not None:
         return Command(func, **kwargs)
     return lambda fun: Command(fun, **kwargs)
+
+
+def assert_true(arg):
+    if not arg:
+        raise Command.IncorrectUsageException()
+
+
+def assert_arglen(args, num):
+    if len(args) != num:
+        raise Command.IncorrectUsageException()
