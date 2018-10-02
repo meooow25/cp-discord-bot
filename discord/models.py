@@ -1,4 +1,14 @@
-class Channel:
+class DiscordObject:
+
+    @classmethod
+    def from_dict(cls, d):
+        raise NotImplementedError("This method must be overriden")
+
+    def to_dict(self):
+        raise NotImplementedError("This method must be overriden")
+
+
+class Channel(DiscordObject):
     TYPE_GUILD_TEXT = 0
     TYPE_DM = 1
     TYPE_GUILD_VOICE = 2
@@ -10,12 +20,12 @@ class Channel:
         self.type = type
 
     @classmethod
-    def from_dict(cls, channel_dict):
-        if channel_dict['type'] == cls.TYPE_GUILD_TEXT:
-            return GuildTextChannel(channel_dict['id'], channel_dict.get('name', ''))
-        if channel_dict['type'] == cls.TYPE_DM:
-            return DMChannel(channel_dict['id'], channel_dict['recipients'])
-        return Channel(channel_dict['id'], channel_dict['type'])
+    def from_dict(cls, channel_d):
+        if channel_d['type'] == cls.TYPE_GUILD_TEXT:
+            return GuildTextChannel(channel_d['id'], channel_d.get('name', ''))
+        if channel_d['type'] == cls.TYPE_DM:
+            return DMChannel(channel_d['id'], channel_d['recipients'])
+        return cls(channel_d['id'], channel_d['type'])
 
     def to_dict(self):
         return {
@@ -46,12 +56,3 @@ class DMChannel(Channel):
         d = super().to_dict()
         d['recipients'] = self.recipients
         return d
-
-
-class User:
-
-    def __init__(self, id):
-        self.id = id
-
-    def to_dict(self):
-        return {'id': self.id}

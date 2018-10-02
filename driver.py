@@ -10,7 +10,7 @@ from discord.client import Client
 from sites.atcoder import AtCoder
 from sites.codechef import CodeChef
 from sites.codeforces import Codeforces
-from sites.composite_site import CompositeSite
+from sites.site_container import SiteContainer
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +21,7 @@ NAME = 'Bot'
 TRIGGERS = ['trigger']
 CHANNELS = ['channel_id']
 ACTIVITY_NAME = 'activity'
+DB_NAME = 'db'
 
 
 def main():
@@ -32,12 +33,13 @@ def main():
         raise ValueError(f'Invalid log level: {args.log}')
     logging.basicConfig(format='{levelname}:{name}:{message}', style='{', level=numeric_level)
 
-    client = Client(DISCORD_TOKEN, name=NAME, activity_name=ACTIVITY_NAME)
-    sites = [AtCoder(), CodeChef(), Codeforces()]
-    site = CompositeSite(sites=sites)
-    mongodb_connector = MongoDBConnector(MONGODB_SRV)
+    discord_client = Client(DISCORD_TOKEN, name=NAME, activity_name=ACTIVITY_NAME)
+    mongodb_connector = MongoDBConnector(MONGODB_SRV, DB_NAME)
     manager = Manager(mongodb_connector)
-    bot = Bot(NAME, client, site, manager, triggers=TRIGGERS, allowed_channels=CHANNELS)
+    sites = [AtCoder(), CodeChef(), Codeforces()]
+    site_container = SiteContainer(sites=sites)
+
+    bot = Bot(NAME, discord_client, site_container, manager, triggers=TRIGGERS, allowed_channels=CHANNELS)
 
     try:
         asyncio.run(bot.run())

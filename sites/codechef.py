@@ -3,18 +3,19 @@ from datetime import datetime
 import aiohttp
 from bs4 import BeautifulSoup
 
-from .competitive_programming_site import Site
+from .competitive_programming_site import CPSite
 from .models import Contest, Profile
 
 
-class CodeChef(Site):
+class CodeChef(CPSite):
     NAME = 'CodeChef'
+    TAG = 'cc'
     BASE_URL = 'https://wwww.codechef.com'
     CONTESTS_PATH = '/contests'
     USERS_PATH = '/users'
 
-    def __init__(self, refresh_interval=600):
-        super().__init__(refresh_interval)
+    def __init__(self, contest_refresh_interval=600, user_refresh_interval=3600, user_delay_interval=60):
+        super().__init__(contest_refresh_interval, user_refresh_interval, user_delay_interval)
 
     def __repr__(self):
         return self.NAME
@@ -87,4 +88,4 @@ class CodeChef(Site):
         if rating == 0:
             # User is either unrated or truly terrible at CP, assume former.
             rating = None
-        return Profile(handle, self.NAME, name, rating)
+        return Profile(handle, self.TAG, self.BASE_URL + path, name, rating)

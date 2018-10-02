@@ -1,10 +1,10 @@
 import aiohttp
 
-from .competitive_programming_site import Site
+from .competitive_programming_site import CPSite
 from .models import Contest, Profile
 
 
-class Codeforces(Site):
+class Codeforces(CPSite):
     NAME = 'Codeforces'
     TAG = 'cf'
     API_URL = 'http://codeforces.com/api'
@@ -12,9 +12,10 @@ class Codeforces(Site):
     API_USERS_PATH = '/user.info'
     BASE_URL = 'http://codeforces.com'
     CONTESTS_PATH = '/contests'
+    USERS_PATH = '/profile'
 
-    def __init__(self, refresh_interval=600):
-        super().__init__(refresh_interval)
+    def __init__(self, contest_refresh_interval=600, user_refresh_interval=1800, user_delay_interval=5):
+        super().__init__(contest_refresh_interval, user_refresh_interval, user_delay_interval)
 
     def __repr__(self):
         return self.NAME
@@ -55,4 +56,5 @@ class Codeforces(Site):
         if fullname == ' ':
             fullname = None
         rating = result.get('rating')
-        return Profile(handle, self.NAME, fullname, rating)
+        url = self.BASE_URL + self.USERS_PATH + '/' + handle
+        return Profile(handle, self.TAG, url, fullname, rating)

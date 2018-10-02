@@ -28,7 +28,8 @@ class Client:
         self.start_time = None
         self.last_seq = None
 
-    async def run(self):
+    async def run(self, on_message):
+        self.on_message = on_message
         resp = await self.request('GET', '/gateway')
         socket_url = resp['url']
         async with aiohttp.ClientSession() as session:
@@ -48,14 +49,15 @@ class Client:
                         logger.warning(f'Unhandled type: {msg.type}, {msg.data}')
         raise Exception('This should never happen')
 
-    async def request(self, method, path, headers=None, json_data=None):
+    async def request(self, method, path, headers=None, json_data=None, expect_json=True):
         if headers is None:
             headers = self.headers
         logger.debug(f'{method} {path} {headers} {json_data}')
         async with aiohttp.request(method, f'{self.API_URL}{path}', headers=headers, json=json_data) as response:
             # TODO: Implement a way of ensuring rate limits
             response.raise_for_status()
-            return await response.json()
+            if expect_json:
+                return await response.json()
 
     async def handle_message(self, ws, msg):
         msg = json.loads(msg)
@@ -126,3 +128,12 @@ class Client:
     async def get_channel(self, channel_id):
         logger.info(f'Getting channel with id: {channel_id}')
         return await self.request('GET', f'/channels/{channel_id}')
+
+    async def get_dm_channel(self, user_id):
+        logger.info(f'Getting DM channel for user: {user_id}')
+        json_data = {'recipient_id': user_id}
+        return await self.request('POST', '/users/@me/channels', json_data=json_data)
+
+    async def trigger_typing(self, channel_id):
+        logger.info(f'Triggering typing on channel {channel_id}')
+        return await self.request('POST', f'/channels/{channel_id}/typing', expect_json=False)

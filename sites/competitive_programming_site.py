@@ -4,10 +4,9 @@ import time
 from datetime import datetime, timezone
 
 
-class Site:
-
-    def __init__(self, refresh_interval):
-        self.refresh_interval = refresh_interval
+class ContestSite:
+    def __init__(self, contest_refresh_interval):
+        self.contest_refresh_interval = contest_refresh_interval
         self.future_contests = None
         self.contests_last_fetched = None
         self.logger = logging.getLogger(self.__class__.__qualname__)
@@ -28,13 +27,16 @@ class Site:
     async def _contest_updater_task(self):
         while True:
             try:
-                await asyncio.sleep(self.refresh_interval)
+                await asyncio.sleep(self.contest_refresh_interval)
                 await self.update_contests()
             except asyncio.CancelledError:
                 self.logger.info('Received CancelledError, stopping task')
                 break
             except Exception as ex:
-                self.logger.warning(f'Exception in fetching: {ex}, continuing regardless')
+                self.logger.exception(f'Exception in fetching: {ex}, continuing regardless')
+
+    async def fetch_future_contests(self):
+        raise NotImplementedError('This method must be overridden')
 
     @staticmethod
     def filter_by_site(sites):
@@ -73,8 +75,46 @@ class Site:
         filtered_by_start = filter(self.filter_by_start_max(start_max), filtered_by_site)
         return list(filtered_by_start)
 
-    async def fetch_future_contests(self):
-        raise NotImplementedError(f'{self.__class__}: This method must be overridden')
+
+class CPSite(ContestSite):
+
+    def __init__(self, contest_refresh_interval, user_refresh_interval, user_delay_interval):
+        super().__init__(contest_refresh_interval)
+        self.user_refresh_interval = user_refresh_interval
+        self.user_delay_interval = user_delay_interval
+        self.get_all_users = None
+        self.on_profile_fetch = None
+
+    async def run(self, get_all_users=None, on_profile_fetch=None):
+        self.get_all_users = get_all_users
+        self.on_profile_fetch = on_profile_fetch
+        await super().run()
+        asyncio.create_task(self._user_updater_task())
+
+    async def update_users(self):
+        if self.get_all_users is None or self.on_profile_fetch is None:
+            self.logger.info('Profile handlers not registered')
+            return
+
+        for user in self.get_all_users():
+            old_profile = user.get_profile_for_site(self.TAG)
+            if old_profile is None:
+                continue
+            new_profile = await self.fetch_profile(old_profile.handle)
+            self.logger.info(f'Profile with handle {old_profile.handle} fetched')
+            await self.on_profile_fetch(user, old_profile, new_profile)
+            await asyncio.sleep(self.user_delay_interval)
+
+    async def _user_updater_task(self):
+        while True:
+            try:
+                await asyncio.sleep(self.user_refresh_interval)
+                await self.update_users()
+            except asyncio.CancelledError:
+                self.logger.info('Received CancelledError, stopping task')
+                break
+            except Exception as ex:
+                self.logger.exception(f'Exception in fetching: {ex}, continuing regardless')
 
     async def fetch_profile(self, handle):
-        raise NotImplementedError(f'{self.__class__}: This method must be overridden')
+        raise NotImplementedError('This method must be overridden')

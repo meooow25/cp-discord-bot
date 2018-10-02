@@ -26,31 +26,29 @@ class Contest:
 
 
 class Profile:
-    __slots__ = ('handle', 'site', 'name', 'rating')
+    __slots__ = ('handle', 'site_tag', 'url', 'name', 'rating')
 
-    def __init__(self, handle, site, name, rating):
+    def __init__(self, handle, site_tag, url, name, rating):
         """
         Represents a user of a competitive programming site.
 
         :param handle: the user's handle
-        :param site: the site name
+        :param site_tag: the site tag
+        :param url: the URL of the profile
         :param name: the user's full name, ``None`` if unavailable
         :param rating: the user's current rating, ``None`` if unrated
         """
 
         self.handle = handle
-        self.site = site
+        self.site_tag = site_tag
+        self.url = url
         self.name = name
         self.rating = rating
 
     @classmethod
     def from_dict(cls, profile_dict):
-        return Profile(
-            profile_dict['handle'],
-            profile_dict['site'],
-            profile_dict.get('name'),
-            profile_dict.get('rating')
-        )
+        params = [profile_dict.get(key) for key in cls.__slots__]
+        return Profile(*params)
 
     def to_dict(self):
         return {key: getattr(self, key) for key in self.__slots__}

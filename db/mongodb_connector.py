@@ -4,8 +4,9 @@ import motor.motor_asyncio
 
 
 class MongoDBConnector:
-    def __init__(self, srv):
+    def __init__(self, srv, db_name):
         self.srv = srv
+        self.db_name = db_name
         self.client = None
         self.db = None
         self.logger = logging.getLogger(self.__class__.__qualname__)
@@ -14,7 +15,7 @@ class MongoDBConnector:
         self.logger.debug('Connecting to MongoDB')
         loop = asyncio.get_running_loop()
         self.client = motor.motor_asyncio.AsyncIOMotorClient(self.srv, io_loop=loop)
-        self.db = self.client.discord_db
+        self.db = self.client[self.db_name]
 
     async def put_user(self, user):
         await self.db.users.replace_one({'discord_id': user['discord_id']}, user, upsert=True)

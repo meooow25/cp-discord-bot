@@ -3,18 +3,19 @@ from datetime import datetime
 import aiohttp
 from bs4 import BeautifulSoup
 
-from .competitive_programming_site import Site
+from .competitive_programming_site import CPSite
 from .models import Contest, Profile
 
 
-class AtCoder(Site):
+class AtCoder(CPSite):
     NAME = 'AtCoder'
+    TAG = 'at'
     BASE_URL = 'https://beta.atcoder.jp'
     CONTESTS_PATH = '/contests'
     USERS_PATH = '/users'
 
-    def __init__(self, refresh_interval=600):
-        super().__init__(refresh_interval)
+    def __init__(self, contest_refresh_interval=600, user_refresh_interval=3600, user_delay_interval=30):
+        super().__init__(contest_refresh_interval, user_refresh_interval, user_delay_interval)
 
     def __repr__(self):
         return self.NAME
@@ -90,4 +91,4 @@ class AtCoder(Site):
         else:
             rating_tag = rating_heading.next_sibling.span
             rating = int(rating_tag.string)
-        return Profile(handle, self.NAME, name, rating)
+        return Profile(handle, self.TAG, self.BASE_URL + path, name, rating)
