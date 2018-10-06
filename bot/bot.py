@@ -95,40 +95,45 @@ class Bot:
         )
         await self.client.run(on_message=self.on_message)
 
-    async def on_message(self, client, data):
-        if data['author'].get('bot', False):
+    async def on_message(self, client, message):
+        # message.author is None when message is sent by a webhook.
+        if message.author and message.author.bot:
             return
 
-        channel_id = data['channel_id']
-        channel = await self.get_channel(channel_id)
-        if channel.type == Channel.TYPE_DM:
-            msg = data['content']
-            args = msg.split()
-            if len(args) == 0:
+        channel = await self.get_channel(message.channel_id)
+        if channel.type == Channel.Type.DM:
+            # Trigger not required for DM.
+            args = message.content.split()
+            if not args:
                 return
+            await self.run_command_from_map(self.dm_channel_command_map, args, client, message)
+            return
+
+        if self.allowed_channels is None or message.channel_id in self.allowed_channels:
+            args = message.content.split()
+            if len(args) < 2:
+                # Trigger + command
+                return
+            # Ignore trigger case.
             args[0] = args[0].lower()
-            await self.run_command_from_map(self.dm_channel_command_map, args, client, data)
-            return
-
-        if self.allowed_channels is None or channel_id in self.allowed_channels:
-            msg = data['content']
-            args = msg.lower().split()
-            if len(args) < 2 or args[0] not in self.triggers and args[0] != f'<@{client.user["id"]}>':
+            if args[0] not in self.triggers and args[0] != f'<@{client.user["id"]}>':
                 return
-            await self.run_command_from_map(self.guild_channel_command_map, args[1:], client, data)
+            await self.run_command_from_map(self.guild_channel_command_map, args[1:], client, message)
             return
 
-        self.logger.info(f'Ignoring message from channel {channel_id}')
+        self.logger.info(f'Ignoring message from channel {message.channel_id}')
 
-    async def run_command_from_map(self, command_map, args, client, data):
+    async def run_command_from_map(self, command_map, args, client, message):
+        # Ignore command case.
+        args[0] = args[0].lower()
         command = command_map.get(args[0])
         if command is None:
             self.logger.info(f'Unsupported command {args}')
             return
 
         try:
-            await command.execute(args[1:], self, client, data)
-        except Command.IncorrectUsageException:
+            await command.execute(args[1:], self, client, message)
+        except Command.IncorrectUsageException as ex:
             self.logger.info(f'IncorrectUsageException: {args}')
         return
 
@@ -136,7 +141,6 @@ class Bot:
         channel = self.manager.get_channel(channel_id)
         if channel is None:
             channel = await self.client.get_channel(channel_id)
-            channel = Channel.from_dict(channel)
             await self.manager.save_channel(channel)
         return channel
 

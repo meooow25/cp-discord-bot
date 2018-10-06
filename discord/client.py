@@ -6,7 +6,8 @@ import time
 
 import aiohttp
 
-from discord import discord_opcode as d_opcode
+from .websocket_consts import EventType, Opcode
+from .models import Message, Channel
 
 logger = logging.getLogger(__name__)
 
@@ -67,10 +68,10 @@ class Client:
         typ = msg.get('t')
         data = msg.get('d')
         logger.info(f'Received: {op} {typ}')
-        if op == d_opcode.HELLO:
+        if op == Opcode.HELLO:
             logger.info(data)
             reply = {
-                'op': d_opcode.IDENTIFY,
+                'op': Opcode.IDENTIFY,
                 'd': {
                     'token': self.token,
                     'properties': {
@@ -91,9 +92,9 @@ class Client:
                 }
             await ws.send_json(reply)
             asyncio.create_task(self.heartbeat(ws, data['heartbeat_interval']))
-        elif op == d_opcode.HEARTBEAT_ACK:
+        elif op == Opcode.HEARTBEAT_ACK:
             logger.info('Heartbeat-ack received')
-        elif op == d_opcode.DISPATCH:
+        elif op == Opcode.DISPATCH:
             logger.debug('Handling dispatch')
             await self.handle_dispatch(typ, data)
         else:
@@ -101,7 +102,7 @@ class Client:
 
     async def heartbeat(self, ws, interval_ms):
         interval_sec = interval_ms / 1000
-        data = {'op': d_opcode.HEARTBEAT}
+        data = {'op': Opcode.HEARTBEAT}
         while True:
             await asyncio.sleep(interval_sec)
             data['d'] = self.last_seq
@@ -109,14 +110,15 @@ class Client:
             await ws.send_json(data)
 
     async def handle_dispatch(self, typ, data):
-        if typ == 'READY':
+        if typ == EventType.READY:
             self.user = data['user']
             logger.info(f'Self data: {self.user}')
-        elif typ == 'MESSAGE_CREATE':
+        elif typ == EventType.MESSAGE_CREATE:
             if self.on_message:
+                message = Message(**data)
                 logger.debug('Calling on_message handler')
-                # TODO: Replies to any singe channel should not be out of order.
-                asyncio.create_task(self.on_message(self, data))
+                # TODO: Replies to any single channel should not be out of order.
+                asyncio.create_task(self.on_message(self, message))
         else:
             # nothing else supported
             pass
@@ -127,12 +129,14 @@ class Client:
 
     async def get_channel(self, channel_id):
         logger.info(f'Getting channel with id: {channel_id}')
-        return await self.request('GET', f'/channels/{channel_id}')
+        channel_d = await self.request('GET', f'/channels/{channel_id}')
+        return Channel(**channel_d)
 
     async def get_dm_channel(self, user_id):
         logger.info(f'Getting DM channel for user: {user_id}')
         json_data = {'recipient_id': user_id}
-        return await self.request('POST', '/users/@me/channels', json_data=json_data)
+        channel_d = await self.request('POST', '/users/@me/channels', json_data=json_data)
+        return Channel(**channel_d)
 
     async def trigger_typing(self, channel_id):
         logger.info(f'Triggering typing on channel {channel_id}')

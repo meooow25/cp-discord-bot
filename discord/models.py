@@ -1,58 +1,71 @@
-class DiscordObject:
-
-    @classmethod
-    def from_dict(cls, d):
-        raise NotImplementedError("This method must be overriden")
-
-    def to_dict(self):
-        raise NotImplementedError("This method must be overriden")
+from enum import IntEnum
 
 
-class Channel(DiscordObject):
-    TYPE_GUILD_TEXT = 0
-    TYPE_DM = 1
-    TYPE_GUILD_VOICE = 2
-    TYPE_GROUP_DM = 3
-    TYPE_GUILD_CATEGORY = 4
+class User:
+    __slots__ = ('id', 'username', 'discriminator', 'bot')
 
-    def __init__(self, id, type):
-        self.id = id
-        self.type = type
-
-    @classmethod
-    def from_dict(cls, channel_d):
-        if channel_d['type'] == cls.TYPE_GUILD_TEXT:
-            return GuildTextChannel(channel_d['id'], channel_d.get('name', ''))
-        if channel_d['type'] == cls.TYPE_DM:
-            return DMChannel(channel_d['id'], channel_d['recipients'])
-        return cls(channel_d['id'], channel_d['type'])
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.username = kwargs['username']
+        self.discriminator = kwargs['discriminator']
+        self.bot = kwargs.get('bot')
 
     def to_dict(self):
         return {
-            'id': self.id,
-            'type': self.type,
+            key: getattr(self, key)
+            for key in self.__slots__
+            if getattr(self, key) is not None
         }
 
 
-class GuildTextChannel(Channel):
-    def __init__(self, id, name):
-        super().__init__(id, Channel.TYPE_GUILD_TEXT)
-        self.name = name
+class Channel:
+    __slots__ = ('id', 'type', 'name', 'guild_id', 'recipients')
+
+    class Type(IntEnum):
+        GUILD_TEXT = 0
+        DM = 1
+        GUILD_VOICE = 2
+        GROUP_DM = 3
+        GUILD_CATEGORY = 4
+
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.type = self.Type(kwargs['type'])
+        self.name = kwargs.get('name')
+        self.guild_id = kwargs.get('guild_id')
+        self.recipients = None
+        if kwargs.get('recipients'):
+            self.recipients = [User(**user_d) for user_d in kwargs.get('recipients')]
 
     def to_dict(self):
-        """Overrides to_dict in Channel"""
-        d = super().to_dict()
-        d['name'] = self.name
-        return d
+        channel_d = {
+            key: getattr(self, key)
+            for key in self.__slots__
+            if getattr(self, key) is not None
+        }
+        if self.recipients:
+            channel_d['recipients'] = [user.to_dict() for user in self.recipients]
+        return channel_d
 
 
-class DMChannel(Channel):
-    def __init__(self, id, recipients):
-        super().__init__(id, Channel.TYPE_DM)
-        self.recipients = recipients
+class Message:
+    __slots__ = ('id', 'type', 'channel_id', 'webhook_id', 'author', 'content', 'embeds')
 
-    def to_dict(self):
-        """Overrides to_dict in Channel"""
-        d = super().to_dict()
-        d['recipients'] = self.recipients
-        return d
+    class Type(IntEnum):
+        DEFAULT = 0
+        RECIPIENT_ADD = 1
+        RECIPIENT_REMOVE = 2
+        CALL = 3
+        CHANNEL_NAME_CHANGE = 4
+        CHANNEL_ICON_CHANGE = 5
+        CHANNEL_PINNED_MESSAGE = 6
+        GUILD_MEMBER_JOIN = 7
+
+    def __init__(self, **kwargs):
+        self.id = kwargs['id']
+        self.type = self.Type(kwargs['type'])
+        self.channel_id = kwargs['channel_id']
+        self.webhook_id = kwargs.get('webhook_id')
+        self.author = User(**kwargs['author']) if not self.webhook_id else None
+        self.content = kwargs['content']
+        self.embeds = kwargs['embeds']

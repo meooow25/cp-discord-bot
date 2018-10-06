@@ -9,24 +9,24 @@ logger = logging.getLogger(__name__)
 
 
 @command(desc='Responds with boop')
-async def beep(args, bot, client, data):
+async def beep(args, bot, client, message):
     assert_arglen(args, 0)
     reply = {'content': '*boop*'}
-    await client.send_message(reply, data['channel_id'])
+    await client.send_message(reply, message.channel_id)
 
 
 @command(desc='Displays this message')
-async def help(args, bot, client, data):
+async def help(args, bot, client, message):
     assert_arglen(args, 0)
     reply = bot.help_message
-    await client.send_message(reply, data['channel_id'])
+    await client.send_message(reply, message.channel_id)
 
 
 @command(desc='Displays bot info')
-async def info(args, bot, client, data):
+async def info(args, bot, client, message):
     assert_arglen(args, 0)
     reply = bot.info_message
-    await client.send_message(reply, data['channel_id'])
+    await client.send_message(reply, message.channel_id)
 
 
 @command(usage='next [cnt] [at] [cc] [cf]',
@@ -34,13 +34,14 @@ async def info(args, bot, client, data):
               'If `cnt` is `day`, displays contests which start within the next 24 hours. If `cnt` is '
               'missing, it defaults to `1`. Takes optional site filters, where `at` = *AtCoder*, `cc` '
               '= *CodeChef* and `cf` = *Codeforces*')
-async def next(args, bot, client, data):
+async def next(args, bot, client, message):
     sitemap = {
         'at': 'AtCoder',
         'cc': 'CodeChef',
         'cf': 'Codeforces',
     }
 
+    args = [arg.lower() for arg in args]
     opt = set()
     rem = set()
     for arg in args:
@@ -75,7 +76,7 @@ async def next(args, bot, client, data):
         logger.info(f'{len(future_contests)} future contests fetched out of {cnt}')
 
     reply = create_message_from_contests(future_contests, cnt, sites, bot.MSG_MAX_CONTESTS, bot.TIME_ZONE)
-    await client.send_message(reply, data['channel_id'])
+    await client.send_message(reply, message.channel_id)
 
 
 def create_message_from_contests(contests, cnt, sites, max_contests, time_zone):
@@ -137,7 +138,7 @@ def create_message_from_contests(contests, cnt, sites, max_contests, time_zone):
 
 
 @command(desc='Displays bot status')
-async def status(args, bot, client, data):
+async def status(args, bot, client, message):
     assert_arglen(args, 0)
     reply = copy.deepcopy(bot.status_message)
     now = time.time()
@@ -155,4 +156,4 @@ async def status(args, bot, client, data):
         last = (now - site.contests_last_fetched) / 60
         field2['value'] += f'{site.NAME}: {last:.0f} mins ago\n'
     reply['embed']['fields'] += [field1, field2]
-    await client.send_message(reply, data['channel_id'])
+    await client.send_message(reply, message.channel_id)

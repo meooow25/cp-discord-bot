@@ -27,7 +27,7 @@ class Manager:
 
     async def load_channels(self):
         channels = await self.db_connector.get_all_channels()
-        channels = [Channel.from_dict(channel) for channel in channels]
+        channels = [Channel(**channel_d) for channel_d in channels]
         self._channel_id_to_channel = {channel.id: channel for channel in channels}
         self.logger.info(f'Loaded {len(channels)} channels from db')
 
