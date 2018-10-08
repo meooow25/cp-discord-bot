@@ -34,6 +34,7 @@ class Codeforces(CPSite):
         assert data['status'] == 'OK', data['comment']
         contests = [contest for contest in data['result'] if contest['phase'] == 'BEFORE']
         future_contests = [Contest(contest['name'],
+                                   self.TAG,
                                    self.NAME,
                                    f'{self.BASE_URL}{self.CONTESTS_PATH}/{contest["id"]}',
                                    contest.get('startTimeSeconds'),
@@ -57,4 +58,4 @@ class Codeforces(CPSite):
             fullname = None
         rating = result.get('rating')
         url = self.BASE_URL + self.USERS_PATH + '/' + handle
-        return Profile(handle, self.TAG, url, fullname, rating)
+        return Profile(handle, self.TAG, self.NAME, url, fullname, rating)

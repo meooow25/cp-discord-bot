@@ -14,7 +14,7 @@ class CodeChef(CPSite):
     CONTESTS_PATH = '/contests'
     USERS_PATH = '/users'
 
-    def __init__(self, contest_refresh_interval=600, user_refresh_interval=3600, user_delay_interval=60):
+    def __init__(self, contest_refresh_interval=10*60, user_refresh_interval=45*60, user_delay_interval=60):
         super().__init__(contest_refresh_interval, user_refresh_interval, user_delay_interval)
 
     def __repr__(self):
@@ -63,7 +63,7 @@ class CodeChef(CPSite):
             end = datetime.strptime(end, fmt)
             end = int(end.timestamp())
             length = end - start
-            future_contests.append(Contest(name, self.NAME, url, start, length))
+            future_contests.append(Contest(name, self.TAG, self.NAME, url, start, length))
 
         future_contests.sort()
         return future_contests
@@ -88,4 +88,4 @@ class CodeChef(CPSite):
         if rating == 0:
             # User is either unrated or truly terrible at CP, assume former.
             rating = None
-        return Profile(handle, self.TAG, self.BASE_URL + path, name, rating)
+        return Profile(handle, self.TAG, self.NAME, self.BASE_URL + path, name, rating)

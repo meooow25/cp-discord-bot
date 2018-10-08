@@ -39,10 +39,10 @@ class ContestSite:
         raise NotImplementedError('This method must be overridden')
 
     @staticmethod
-    def filter_by_site(sites):
-        if not sites:
+    def filter_by_site(site_tags):
+        if not site_tags:
             return lambda contest: True
-        return lambda contest: contest.site in sites
+        return lambda contest: contest.site_tag in site_tags
 
     @staticmethod
     def filter_by_start_min(start_min):
@@ -61,17 +61,17 @@ class ContestSite:
         future_contests = filter(self.filter_by_start_min(now), self.future_contests)
         return future_contests
 
-    def get_future_contests_cnt(self, cnt, sites):
-        self.logger.info(f'get_future_contests_cnt: {cnt} {sites}')
+    def get_future_contests_cnt(self, cnt, sites_tags):
+        self.logger.info(f'get_future_contests_cnt: {cnt} {sites_tags}')
         future_contests = self._get_future_contests()
-        filtered_by_site = filter(self.filter_by_site(sites), future_contests)
+        filtered_by_site = filter(self.filter_by_site(sites_tags), future_contests)
         if cnt == 'all':
             cnt = len(self.future_contests)
         return list(filtered_by_site)[:cnt]
 
-    def get_future_contests_before(self, start_max, sites):
+    def get_future_contests_before(self, start_max, site_tags):
         future_contests = self._get_future_contests()
-        filtered_by_site = filter(self.filter_by_site(sites), future_contests)
+        filtered_by_site = filter(self.filter_by_site(site_tags), future_contests)
         filtered_by_start = filter(self.filter_by_start_max(start_max), filtered_by_site)
         return list(filtered_by_start)
 

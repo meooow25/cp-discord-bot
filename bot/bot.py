@@ -152,7 +152,6 @@ class Bot:
         if not changed:
             return
         self.logger.debug(f'Changed profile: {old_profile.to_dict()}, {new_profile.to_dict()}')
-        site_name = self.site_container.get_site_name(old_profile.site_tag)
         old_str = f'Name: {old_profile.name}\n' if old_profile.name is not None else ''
         old_str += f'Rating: {old_profile.rating if old_profile.rating is not None else "Unrated"}'
         new_str = f'Name: {new_profile.name}\n' if new_profile.name is not None else ''
@@ -172,7 +171,7 @@ class Bot:
         msg = {
             'content': '*Your profile has been updated*',
             'embed': {
-                'title': f'{new_profile.handle} on {site_name}',
+                'title': f'{new_profile.handle} on {new_profile.site_name}',
                 'url': new_profile.url,
                 'fields': fields,
             },
