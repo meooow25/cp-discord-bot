@@ -4,7 +4,7 @@ import logging
 import os
 
 from bot.bot import Bot
-from bot.manager import Manager
+from bot.entity_manager import EntityManager
 from db.mongodb_connector import MongoDBConnector
 from discord.client import Client
 from sites.atcoder import AtCoder
@@ -35,11 +35,11 @@ def main():
 
     discord_client = Client(DISCORD_TOKEN, name=NAME, activity_name=ACTIVITY_NAME)
     mongodb_connector = MongoDBConnector(MONGODB_SRV, DB_NAME)
-    manager = Manager(mongodb_connector)
+    entity_manager = EntityManager(mongodb_connector)
     sites = [AtCoder(), CodeChef(), Codeforces()]
     site_container = SiteContainer(sites=sites)
 
-    bot = Bot(NAME, discord_client, site_container, manager, triggers=TRIGGERS, allowed_channels=CHANNELS)
+    bot = Bot(NAME, discord_client, site_container, entity_manager, triggers=TRIGGERS, allowed_channels=CHANNELS)
 
     try:
         asyncio.run(bot.run())

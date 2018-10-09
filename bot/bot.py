@@ -1,4 +1,3 @@
-import json
 import logging
 import platform
 from datetime import timedelta, timezone
@@ -16,11 +15,11 @@ class Bot:
     # TODO: Support separate time zones per channel or server
     TIME_ZONE = timezone(timedelta(hours=5, minutes=30))
 
-    def __init__(self, name, client, site_container, manager, triggers=None, allowed_channels=None):
+    def __init__(self, name, client, site_container, entity_manager, triggers=None, allowed_channels=None):
         self.name = name
         self.client = client
         self.site_container = site_container
-        self.manager = manager
+        self.entity_manager = entity_manager
         self.triggers = triggers
         self.allowed_channels = allowed_channels
         self.logger = logging.getLogger(self.__class__.__qualname__)
@@ -88,14 +87,15 @@ class Bot:
         }
 
     async def run(self):
-        await self.manager.run()
-        await self.site_container.run(
-            get_all_users=self.get_all_users,
-            on_profile_fetch=self.on_profile_fetch
-        )
+        """Runs the entity manager, site container, and Discord client."""
+        await self.entity_manager.run()
+        await self.site_container.run(get_all_users=self.get_all_users,
+                                      on_profile_fetch=self.on_profile_fetch)
         await self.client.run(on_message=self.on_message)
 
     async def on_message(self, client, message):
+        """Callback intended to be executed when the Discord client receives a message."""
+
         # message.author is None when message is sent by a webhook.
         if message.author and message.author.bot:
             return
@@ -124,11 +124,13 @@ class Bot:
         self.logger.info(f'Ignoring message from channel {message.channel_id}')
 
     async def run_command_from_map(self, command_map, args, client, message):
+        """Executes the command named ``args[0]`` in ``command_map`` if it exists."""
+
         # Ignore command case.
         args[0] = args[0].lower()
         command = command_map.get(args[0])
         if command is None:
-            self.logger.info(f'Unsupported command {args}')
+            self.logger.info(f'Unrecognized command {args}')
             return
 
         try:
@@ -138,17 +140,25 @@ class Bot:
         return
 
     async def get_channel(self, channel_id):
-        channel = self.manager.get_channel(channel_id)
+        """Returns the Discord channel with given channel id.
+
+        Attempts to find the channel is the entity manager first. If not found, the client is queried and the returned
+        channel saved to the entity manager before returning.
+        """
+        channel = self.entity_manager.get_channel(channel_id)
         if channel is None:
             channel = await self.client.get_channel(channel_id)
-            await self.manager.save_channel(channel)
+            await self.entity_manager.save_channel(channel)
         return channel
 
     def get_all_users(self):
-        return self.manager.users[:]
+        """Returns a shallow copy of the list of all users."""
+        return self.entity_manager.users[:]
 
     async def on_profile_fetch(self, user, old_profile, new_profile):
-        changed = await self.manager.update_user_site_profile(user.discord_id, new_profile)
+        """Callback intended to be executed when the site container updates a user site profile."""
+
+        changed = await self.entity_manager.update_user_site_profile(user.discord_id, new_profile)
         if not changed:
             return
         self.logger.debug(f'Changed profile: {old_profile.to_dict()}, {new_profile.to_dict()}')

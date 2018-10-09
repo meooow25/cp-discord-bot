@@ -3,28 +3,28 @@ import logging
 import time
 from datetime import datetime, timezone, timedelta
 
-from .command import Command, command, assert_arglen, assert_true
+from .command import Command, command
 
 logger = logging.getLogger(__name__)
 
 
 @command(desc='Responds with boop')
 async def beep(args, bot, client, message):
-    assert_arglen(args, 0)
+    Command.assert_arglen(args, 0)
     reply = {'content': '*boop*'}
     await client.send_message(reply, message.channel_id)
 
 
 @command(desc='Displays this message')
 async def help(args, bot, client, message):
-    assert_arglen(args, 0)
+    Command.assert_arglen(args, 0)
     reply = bot.help_message
     await client.send_message(reply, message.channel_id)
 
 
 @command(desc='Displays bot info')
 async def info(args, bot, client, message):
-    assert_arglen(args, 0)
+    Command.assert_arglen(args, 0)
     reply = bot.info_message
     await client.send_message(reply, message.channel_id)
 
@@ -54,7 +54,7 @@ async def next(args, bot, client, message):
         else:
             try:
                 cnt = int(cnt)
-                assert_true(cnt > 0)
+                Command.assert_true(cnt > 0)
             except ValueError:
                 raise Command.IncorrectUsageException()
     else:
@@ -132,7 +132,7 @@ def create_message_from_contests(contests, cnt, site_names, max_contests, time_z
 
 @command(desc='Displays bot status')
 async def status(args, bot, client, message):
-    assert_arglen(args, 0)
+    Command.assert_arglen(args, 0)
     reply = copy.deepcopy(bot.status_message)
     now = time.time()
     uptime = (now - client.start_time) / 3600
