@@ -97,7 +97,7 @@ class Bot:
         """Callback intended to be executed when the Discord client receives a message."""
 
         # message.author is None when message is sent by a webhook.
-        if message.author and message.author.bot:
+        if not message.author or message.author.bot:
             return
 
         channel = await self.get_channel(message.channel_id)

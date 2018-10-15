@@ -5,13 +5,19 @@ from datetime import datetime, timezone
 
 
 class ContestSite:
+    """A site that has contests."""
+
     def __init__(self, contest_refresh_interval):
+        """
+        :param contest_refresh_interval: the interval between consecutive requests to the site to fetch contests.
+        """
         self.contest_refresh_interval = contest_refresh_interval
         self.future_contests = None
         self.contests_last_fetched = None
         self.logger = logging.getLogger(self.__class__.__qualname__)
 
     async def run(self):
+        """Update the contest list and schedule future updates."""
         self.logger.info('Setting up site...')
         # Initial fetch.
         await self.update_contests()
@@ -19,12 +25,14 @@ class ContestSite:
         asyncio.create_task(self._contest_updater_task())
 
     async def update_contests(self):
+        """Update the list of future contests."""
         self.future_contests = await self.fetch_future_contests()
         self.logger.info(f'Updated! {len(self.future_contests)} upcoming')
         self.logger.debug(f'Fetched contests: {self.future_contests}')
         self.contests_last_fetched = time.time()
 
     async def _contest_updater_task(self):
+        """Run forever and update contests at regular intervals."""
         while True:
             try:
                 await asyncio.sleep(self.contest_refresh_interval)
@@ -53,15 +61,20 @@ class ContestSite:
         return lambda contest: contest.start <= start_max
 
     def _get_future_contests(self):
-        """
-        Returns future contests. Because the contests are fetched every self.refresh_interval time, self.future_contests
-        may contain contests which have already started. This function filters out such contests.
+        """ Returns future contests. Because the contests are fetched every self.refresh_interval time,
+        self.future_contests may contain contests which have already started. This function filters out such contests.
         """
         now = datetime.now(timezone.utc).timestamp()
         future_contests = filter(self.filter_by_start_min(now), self.future_contests)
         return future_contests
 
     def get_future_contests_cnt(self, cnt, sites_tags):
+        """Get the given number of future contests.
+
+        :param cnt: the number of contests to get, and integer or ``"all"``.
+        :param sites_tags: the site tags for sites to filter by.
+        :return: a list of contests.
+        """
         self.logger.info(f'get_future_contests_cnt: {cnt} {sites_tags}')
         future_contests = self._get_future_contests()
         filtered_by_site = filter(self.filter_by_site(sites_tags), future_contests)
@@ -70,6 +83,12 @@ class ContestSite:
         return list(filtered_by_site)[:cnt]
 
     def get_future_contests_before(self, start_max, site_tags):
+        """Get future contests starting before the given time.
+
+        :param start_max: the maximum start time of the contest as UTC timestamp.
+        :param site_tags: the site tags for sites to filter by.
+        :return: a list of contests.
+        """
         future_contests = self._get_future_contests()
         filtered_by_site = filter(self.filter_by_site(site_tags), future_contests)
         filtered_by_start = filter(self.filter_by_start_max(start_max), filtered_by_site)
@@ -77,8 +96,14 @@ class ContestSite:
 
 
 class CPSite(ContestSite):
+    """A site that has contests as well as users."""
 
     def __init__(self, contest_refresh_interval, user_refresh_interval, user_delay_interval):
+        """
+        :param contest_refresh_interval: the interval between consecutive requests to the site to fetch contests.
+        :param user_refresh_interval: the interval between consecutive requests to the site to fetch users.
+        :param user_delay_interval: the delay between requests for two consecutive users.
+        """
         super().__init__(contest_refresh_interval)
         self.user_refresh_interval = user_refresh_interval
         self.user_delay_interval = user_delay_interval
@@ -86,12 +111,20 @@ class CPSite(ContestSite):
         self.on_profile_fetch = None
 
     async def run(self, get_all_users=None, on_profile_fetch=None):
+        """
+        Schedule regular fetch of contests and profiles.
+
+        :param get_all_users: the function that provides a list of users to fetch.
+        :param on_profile_fetch: the callback to be executed when a profile is fetched.
+        :return:
+        """
         self.get_all_users = get_all_users
         self.on_profile_fetch = on_profile_fetch
         await super().run()
         asyncio.create_task(self._user_updater_task())
 
     async def update_users(self):
+        """Update all users provided by the registered function ``get_all_users``."""
         if self.get_all_users is None or self.on_profile_fetch is None:
             self.logger.info('Profile handlers not registered')
             return
@@ -99,6 +132,7 @@ class CPSite(ContestSite):
         for user in self.get_all_users():
             old_profile = user.get_profile_for_site(self.TAG)
             if old_profile is None:
+                # The user has not registered a profile for this site.
                 continue
             new_profile = await self.fetch_profile(old_profile.handle)
             self.logger.info(f'Profile with handle {old_profile.handle} fetched')
@@ -106,6 +140,7 @@ class CPSite(ContestSite):
             await asyncio.sleep(self.user_delay_interval)
 
     async def _user_updater_task(self):
+        """Run forever and update users at regular intervals."""
         while True:
             try:
                 await asyncio.sleep(self.user_refresh_interval)

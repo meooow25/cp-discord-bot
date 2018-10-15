@@ -1,2 +1,4 @@
 from .client import Client
-from .models import User, Channel, Message
+from .models import Channel, Message, User
+
+__all__ = ['Channel', 'Client', 'Message', 'User']

@@ -68,7 +68,8 @@ async def next(args, bot, client, message):
         future_contests = bot.site_container.get_future_contests_cnt(cnt, site_tag_to_name.keys())
         logger.info(f'{len(future_contests)} future contests fetched out of {cnt}')
 
-    reply = create_message_from_contests(future_contests, cnt, site_tag_to_name.values(), bot.MSG_MAX_CONTESTS, bot.TIME_ZONE)
+    reply = create_message_from_contests(future_contests, cnt, site_tag_to_name.values(),
+                                         bot.MSG_MAX_CONTESTS, bot.TIME_ZONE)
     await client.send_message(reply, message.channel_id)
 
 

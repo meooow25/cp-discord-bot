@@ -17,9 +17,6 @@ class CodeChef(CPSite):
     def __init__(self, contest_refresh_interval=10*60, user_refresh_interval=45*60, user_delay_interval=60):
         super().__init__(contest_refresh_interval, user_refresh_interval, user_delay_interval)
 
-    def __repr__(self):
-        return self.NAME
-
     async def _request(self, path):
         path = self.BASE_URL + path
         headers = {'User-Agent': f'aiohttp/{aiohttp.__version__}'}
@@ -29,7 +26,7 @@ class CodeChef(CPSite):
             return await response.text()
 
     async def fetch_future_contests(self):
-        """Overrides method in Site"""
+        """Overrides method in ContestSite"""
         html = await self._request(self.CONTESTS_PATH)
         soup = BeautifulSoup(html, 'html.parser')
 
@@ -69,6 +66,7 @@ class CodeChef(CPSite):
         return future_contests
 
     async def fetch_profile(self, handle):
+        """Overrides method in CPSite"""
         path = self.USERS_PATH + '/' + handle
         try:
             html = await self._request(path)
