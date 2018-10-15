@@ -1,6 +1,6 @@
 import logging
 
-from sites.competitive_programming_site import ContestSite
+from .competitive_programming_site import ContestSite
 
 
 class SiteContainer(ContestSite):

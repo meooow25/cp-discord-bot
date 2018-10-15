@@ -3,14 +3,11 @@ import asyncio
 import logging
 import os
 
-from bot.bot import Bot
-from bot.entity_manager import EntityManager
-from db.mongodb_connector import MongoDBConnector
-from discord.client import Client
-from sites.atcoder import AtCoder
-from sites.codechef import CodeChef
-from sites.codeforces import Codeforces
-from sites.site_container import SiteContainer
+from .bot import Bot
+from .entity_manager import EntityManager
+from .db import MongoDBConnector
+from .discord import Client
+from .sites import AtCoder, CodeChef, Codeforces, SiteContainer
 
 logger = logging.getLogger(__name__)
 
@@ -19,7 +16,7 @@ MONGODB_SRV = os.environ['MONGODB_SRV']
 
 NAME = 'Bot'
 TRIGGERS = ['trigger']
-CHANNELS = ['channel_id']
+CHANNELS = ['channel']
 ACTIVITY_NAME = 'activity'
 DB_NAME = 'db'
 

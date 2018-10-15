@@ -1,7 +1,7 @@
 import logging
 
-from bot.models import User
-from discord.models import Channel
+from .models import User
+from .discord import Channel
 
 
 class EntityManager:

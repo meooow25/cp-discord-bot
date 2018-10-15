@@ -2,8 +2,7 @@ class Contest:
     __slots__ = ('name', 'site_tag', 'site_name', 'url', 'start', 'length')
 
     def __init__(self, name, site_tag, site_name, url, start, length):
-        """
-        Represents a competitive programming contest.
+        """Represents a competitive programming contest.
 
         :param name: the name of the contest
         :param site_tag: the site tag
@@ -31,8 +30,7 @@ class Profile:
     __slots__ = ('handle', 'site_tag', 'site_name', 'url', 'name', 'rating')
 
     def __init__(self, handle, site_tag, site_name, url, name, rating):
-        """
-        Represents a user of a competitive programming site.
+        """Represents a user of a competitive programming site.
 
         :param handle: the user's handle
         :param site_tag: the site tag

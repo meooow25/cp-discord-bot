@@ -3,9 +3,9 @@ import platform
 from datetime import timedelta, timezone
 from operator import itemgetter
 
-from discord.models import Channel
-from . import guild_channel_commands, dm_channel_commands
+from . import commands_guild_channel, commands_dm_channel
 from .command import Command
+from .discord import Channel
 
 
 class Bot:
@@ -25,16 +25,16 @@ class Bot:
         self.logger = logging.getLogger(self.__class__.__qualname__)
 
         self.guild_channel_command_map = {}
-        for attr_name in dir(guild_channel_commands):
-            attr = getattr(guild_channel_commands, attr_name)
+        for attr_name in dir(commands_guild_channel):
+            attr = getattr(commands_guild_channel, attr_name)
             if isinstance(attr, Command):
                 command = attr
                 self.guild_channel_command_map[command.name] = command
         self.logger.info(f'Loaded guild channel commands: {self.guild_channel_command_map.keys()}')
 
         self.dm_channel_command_map = {}
-        for attr_name in dir(dm_channel_commands):
-            attr = getattr(dm_channel_commands, attr_name)
+        for attr_name in dir(commands_dm_channel):
+            attr = getattr(commands_dm_channel, attr_name)
             if isinstance(attr, Command):
                 command = attr
                 self.dm_channel_command_map[command.name] = command

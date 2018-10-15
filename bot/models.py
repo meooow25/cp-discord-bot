@@ -1,4 +1,4 @@
-from sites.models import Profile
+from .sites import Profile
 
 
 class User:
