@@ -14,7 +14,7 @@ class Codeforces(CPSite):
     CONTESTS_PATH = '/contests'
     USERS_PATH = '/profile'
 
-    def __init__(self, contest_refresh_interval=600, user_refresh_interval=1800, user_delay_interval=5):
+    def __init__(self, *, contest_refresh_interval, user_refresh_interval, user_delay_interval):
         super().__init__(contest_refresh_interval, user_refresh_interval, user_delay_interval)
 
     async def _request(self, path, params=None, raise_for_status=True):

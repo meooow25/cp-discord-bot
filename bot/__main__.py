@@ -1,5 +1,6 @@
 import argparse
 import asyncio
+import json
 import logging
 import os
 
@@ -14,11 +15,8 @@ logger = logging.getLogger(__name__)
 DISCORD_TOKEN = os.environ['DISCORD_TOKEN']
 MONGODB_SRV = os.environ['MONGODB_SRV']
 
-NAME = 'Bot'
-TRIGGERS = ['trigger']
-CHANNELS = ['channel']
-ACTIVITY_NAME = 'activity'
-DB_NAME = 'db'
+with open('./bot/config.json') as file:
+    CONFIG = json.load(file)
 
 
 def main():
@@ -30,17 +28,22 @@ def main():
         raise ValueError(f'Invalid log level: {args.log}')
     logging.basicConfig(format='{levelname}:{name}:{message}', style='{', level=numeric_level)
 
-    discord_client = Client(DISCORD_TOKEN, name=NAME, activity_name=ACTIVITY_NAME)
-    mongodb_connector = MongoDBConnector(MONGODB_SRV, DB_NAME)
+    discord_client = Client(DISCORD_TOKEN, name=CONFIG['name'], activity_name=CONFIG['activity'])
+    mongodb_connector = MongoDBConnector(MONGODB_SRV, CONFIG['db_name'])
     entity_manager = EntityManager(mongodb_connector)
-    sites = [AtCoder(), CodeChef(), Codeforces()]
+    sites = [
+        AtCoder(**CONFIG['at_config']),
+        CodeChef(**CONFIG['cc_config']),
+        Codeforces(**CONFIG['cf_config']),
+    ]
     site_container = SiteContainer(sites=sites)
 
-    bot = Bot(NAME, discord_client, site_container, entity_manager, triggers=TRIGGERS, allowed_channels=CHANNELS)
+    bot = Bot(CONFIG['name'], discord_client, site_container, entity_manager,
+              triggers=CONFIG['triggers'], allowed_channels=CONFIG['channels'])
 
     try:
         asyncio.run(bot.run())
-    except Exception as ex:
+    except Exception:
         logger.exception('Grinding halt')
 
 

@@ -1,0 +1,26 @@
+{
+  "name": "Bot",
+  "triggers": [
+    "trigger"
+  ],
+  "channels": [
+    "channel_id"
+  ],
+  "activity": "activity",
+  "db_name": "db",
+  "at_config": {
+    "contest_refresh_interval": 600,
+    "user_refresh_interval": 2700,
+    "user_delay_interval": 10
+  },
+  "cc_config": {
+    "contest_refresh_interval": 600,
+    "user_refresh_interval": 2700,
+    "user_delay_interval": 10
+  },
+  "cf_config": {
+    "contest_refresh_interval": 600,
+    "user_refresh_interval": 1800,
+    "user_delay_interval": 2
+  }
+}

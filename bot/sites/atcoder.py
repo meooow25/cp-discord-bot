@@ -14,7 +14,7 @@ class AtCoder(CPSite):
     CONTESTS_PATH = '/contests'
     USERS_PATH = '/users'
 
-    def __init__(self, contest_refresh_interval=10*60, user_refresh_interval=45*60, user_delay_interval=10):
+    def __init__(self, *, contest_refresh_interval, user_refresh_interval, user_delay_interval):
         super().__init__(contest_refresh_interval, user_refresh_interval, user_delay_interval)
 
     async def _request(self, path):

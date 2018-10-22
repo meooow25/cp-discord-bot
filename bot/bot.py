@@ -9,7 +9,7 @@ from .discord import Channel
 
 
 class Bot:
-    AUTHOR_ID = 'author_id'
+    PYTHON_URL = 'https://www.python.org'
     GITHUB_URL = 'https://github.com/meooow25/cp-discord-bot'
     MSG_MAX_CONTESTS = 5
     # TODO: Support separate time zones per channel or server
@@ -66,8 +66,8 @@ class Bot:
         self.info_message = {
             'content': f'*Hello, I am **{self.name}**!*',
             'embed': {
-                'description': f'A half-baked bot made by <@{self.AUTHOR_ID}>\n'
-                               f'Written in awesome Python 3.7\n'
+                'description': f'A half-baked bot made by *meooow*\n'
+                               f'Written in awesome [Python 3.7]({self.PYTHON_URL})\n'
                                f'Check me out on [Github]({self.GITHUB_URL})!',
             },
         }
