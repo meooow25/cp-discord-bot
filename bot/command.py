@@ -29,6 +29,12 @@ class Command:
             raise Command.IncorrectUsageException(msg)
 
     @staticmethod
+    def assert_none(arg, msg=None):
+        if arg is not None:
+            msg = msg or f'Expected None, found {arg}'
+            raise Command.IncorrectUsageException(msg)
+
+    @staticmethod
     def assert_not_none(arg, msg=None):
         if arg is None:
             msg = msg or f'Expected not None, found None'

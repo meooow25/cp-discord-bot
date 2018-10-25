@@ -1,8 +1,9 @@
 import copy
 import logging
 import time
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timedelta
 
+from . import paginator
 from .command import Command, command
 
 logger = logging.getLogger(__name__)
@@ -29,60 +30,60 @@ async def info(args, bot, client, message):
     await client.send_message(reply, message.channel_id)
 
 
-@command(usage='next [cnt] [at] [cc] [cf]',
-         desc='Displays future contests. If cnt is `all` or an integer, displays next `cnt` contests. '
-              'If `cnt` is `day`, displays contests which start within the next 24 hours. If `cnt` is '
-              'missing, it defaults to `1`. Takes optional site filters, where `at` = *AtCoder*, `cc` '
-              '= *CodeChef* and `cf` = *Codeforces*')
+@command(usage='next [cnt] [px] [at] [cc] [cf]',
+         desc='Displays future contests. If `cnt` is absent, displays the next contest. If '
+              '`all`, displays all upcoming contests. If `day`, displays contests which start '
+              'within the next 24 hours. The `p` option specifies the page number, e.g `p2` or '
+              '`p10`. Optional site filters can be used, where `at` = *AtCoder*, `cc` = '
+              '*CodeChef* and `cf` = *Codeforces*')
 async def next(args, bot, client, message):
     args = [arg.lower() for arg in args]
     site_tag_to_name = {}
-    rem = set()
+    cnt = None
+    page = None
     for arg in args:
         name = bot.site_container.get_site_name(arg)
         if name is not None:
             site_tag_to_name[arg] = name
-        else:
-            rem.add(arg)
-
-    if len(rem) == 0:
-        cnt = 1
-    elif len(rem) == 1:
-        cnt = rem.pop()
-        if cnt == 'all' or cnt == 'day':
-            pass
-        else:
+        elif arg in ('all', 'day'):
+            Command.assert_none(cnt)
+            cnt = arg
+        elif arg.startswith('p'):
+            Command.assert_none(page)
             try:
-                cnt = int(cnt)
-                Command.assert_true(cnt > 0)
+                page = int(arg[1:])
+                Command.assert_true(page > 0)
             except ValueError:
                 raise Command.IncorrectUsageException()
-    else:
-        raise Command.IncorrectUsageException()
+        else:
+            raise Command.IncorrectUsageException()
+
+    cnt = cnt or 1
+    page = page or 1
 
     if cnt == 'day':
-        start_max = datetime.now(timezone.utc).timestamp() + timedelta(days=1).total_seconds()
-        future_contests = bot.site_container.get_future_contests_before(start_max, site_tag_to_name.keys())
-        logger.info(f'{len(future_contests)} future contests fetched before {start_max}')
+        start_max = datetime.now().timestamp() + timedelta(days=1).total_seconds()
+        contests = bot.site_container.get_future_contests_before(start_max, site_tag_to_name.keys())
+        logger.info(f'{len(contests)} contests fetched before {start_max}')
     else:
-        future_contests = bot.site_container.get_future_contests_cnt(cnt, site_tag_to_name.keys())
-        logger.info(f'{len(future_contests)} future contests fetched out of {cnt}')
+        contests = bot.site_container.get_future_contests_cnt(cnt, site_tag_to_name.keys())
+        logger.info(f'{len(contests)} contests fetched out of {cnt}')
 
-    reply = create_message_from_contests(future_contests, cnt, site_tag_to_name.values(),
-                                         bot.MSG_MAX_CONTESTS, bot.TIME_ZONE)
+    contests, page, num_pages = paginator.paginate(contests, bot.CONTESTS_PER_PAGE, page)
+
+    reply = create_message_from_contests(contests, cnt, site_tag_to_name.values(),
+                                         bot.TIMEZONE, page, num_pages)
     await client.send_message(reply, message.channel_id)
 
 
-def create_message_from_contests(contests, cnt, site_names, max_contests, time_zone):
+def create_message_from_contests(contests, cnt, site_names, bot_timezone, page, num_pages):
     if len(contests) == 0:
         message = {'content': '*No contest found*'}
         return message
 
-    num_hidden = len(contests) - max_contests
-    contests = contests[:max_contests]
     descs = []
     for contest in contests:
-        start = datetime.fromtimestamp(contest.start, timezone.utc).astimezone(time_zone)
+        start = datetime.fromtimestamp(contest.start, bot_timezone)
         start = start.strftime('%d %b %y, %H:%M')
 
         duration_days, rem_secs = divmod(contest.length, 60 * 60 * 24)
@@ -110,24 +111,21 @@ def create_message_from_contests(contests, cnt, site_names, max_contests, time_z
     if cnt == 'day':
         title = 'Contests that start under 24 hours from now'
     else:
-        title = 'Next contest' if len(contests) == 1 else f'Next {len(contests)} contests'
-    fields = [make_field(*desc) for desc in descs]
-    message = {
-        'content': f'*{title}*',
-        'embed': {
-            'fields': fields,
-        },
+        title = 'Upcoming contests'
+    embed = {
+        'fields': [make_field(*desc) for desc in descs],
     }
-    if num_hidden > 0:
-        plural = 's' if num_hidden > 1 else ''
-        # TODO: Add pagination support
-        message['embed']['footer'] = {
-            'text': f'{num_hidden} more contest{plural} not displayed'
+    if site_names:
+        embed['description'] = 'Showing only: ' + ', '.join(name for name in site_names)
+    if num_pages > 1:
+        embed['footer'] = {
+            'text': f'Page {page} / {num_pages}',
         }
 
-    if site_names:
-        message['embed']['description'] = 'Showing only: ' + ', '.join(name for name in site_names)
-
+    message = {
+        'content': f'*{title}*',
+        'embed': embed,
+    }
     return message
 
 

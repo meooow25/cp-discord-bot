@@ -11,9 +11,9 @@ from .discord import Channel
 class Bot:
     PYTHON_URL = 'https://www.python.org'
     GITHUB_URL = 'https://github.com/meooow25/cp-discord-bot'
-    MSG_MAX_CONTESTS = 5
+    CONTESTS_PER_PAGE = 5
     # TODO: Support separate time zones per channel or server
-    TIME_ZONE = timezone(timedelta(hours=5, minutes=30))
+    TIMEZONE = timezone(timedelta(hours=5, minutes=30))
 
     def __init__(self, name, client, site_container, entity_manager, triggers=None, allowed_channels=None):
         self.name = name
