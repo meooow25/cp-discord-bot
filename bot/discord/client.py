@@ -151,7 +151,7 @@ class Client:
                 message = Message(**data)
                 self.logger.debug('Calling on_message handler')
                 # Run on_message as a separate coroutine.
-                asyncio.create_task(self.on_message(self, message))
+                asyncio.create_task(self.on_message(message))
         else:
             # Nothing else supported.
             pass

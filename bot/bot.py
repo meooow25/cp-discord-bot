@@ -3,8 +3,7 @@ import platform
 from datetime import timedelta, timezone
 from operator import itemgetter
 
-from . import commands_guild_channel, commands_dm_channel
-from .command import Command
+from . import command, commands
 from .discord import Channel
 
 
@@ -24,21 +23,13 @@ class Bot:
         self.allowed_channels = allowed_channels
         self.logger = logging.getLogger(self.__class__.__qualname__)
 
-        self.guild_channel_command_map = {}
-        for attr_name in dir(commands_guild_channel):
-            attr = getattr(commands_guild_channel, attr_name)
-            if isinstance(attr, Command):
-                command = attr
-                self.guild_channel_command_map[command.name] = command
-        self.logger.info(f'Loaded guild channel commands: {self.guild_channel_command_map.keys()}')
-
-        self.dm_channel_command_map = {}
-        for attr_name in dir(commands_dm_channel):
-            attr = getattr(commands_dm_channel, attr_name)
-            if isinstance(attr, Command):
-                command = attr
-                self.dm_channel_command_map[command.name] = command
-        self.logger.info(f'Loaded DM channel commands: {self.dm_channel_command_map.keys()}')
+        self.command_map = {}
+        for attr_name in dir(commands):
+            attr = getattr(commands, attr_name)
+            if isinstance(attr, command.Command):
+                cmd = attr
+                self.command_map[cmd.name] = cmd
+        self.logger.info(f'Loaded commands: {self.command_map.keys()}')
 
         # Help message begin.
         self.help_message = {}
@@ -47,19 +38,11 @@ class Bot:
         else:
             self.help_message['content'] = f'*@mention me or use my trigger `{self.triggers[0]}` to activate me.*\n'
 
-        guild_channel_fields = [{
-            'name': f'{command.usage}',
-            'value': command.desc,
-        } for command in self.guild_channel_command_map.values() if not command.experimental]
-        guild_channel_fields.sort(key=itemgetter('name'))
-        dm_channel_fields = [{
-            'name': f'{command.usage}',
-            'value': command.desc,
-        } for command in self.dm_channel_command_map.values() if not command.experimental]
-        dm_channel_fields.sort(key=itemgetter('name'))
+        fields = [cmd.embed_field_rep() for cmd in self.command_map.values() if not cmd.hidden]
+        fields.sort(key=itemgetter('name'))
         self.help_message['embed'] = {
             'title': 'Supported commands:',
-            'fields': guild_channel_fields + dm_channel_fields,
+            'fields': fields,
         }
 
         # Info message begin.
@@ -93,51 +76,46 @@ class Bot:
                                       on_profile_fetch=self.on_profile_fetch)
         await self.client.run(on_message=self.on_message)
 
-    async def on_message(self, client, message):
+    async def on_message(self, message):
         """Callback intended to be executed when the Discord client receives a message."""
 
         # message.author is None when message is sent by a webhook.
         if not message.author or message.author.bot:
             return
 
-        channel = await self.get_channel(message.channel_id)
-        if channel.type == Channel.Type.DM:
-            # Trigger not required for DM.
-            args = message.content.split()
+        args = message.content.split()
+        if not args:
+            return
+        has_trigger = args[0] in self.triggers if self.triggers else False
+        has_trigger = has_trigger or args[0] == f'<@{self.client.user["id"]}>'
+        if has_trigger:
+            args = args[1:]
             if not args:
                 return
-            await self.run_command_from_map(self.dm_channel_command_map, args, client, message)
-            return
+        on_allowed_channel = self.allowed_channels is None or message.channel_id in self.allowed_channels
 
-        if self.allowed_channels is None or message.channel_id in self.allowed_channels:
-            args = message.content.split()
-            if len(args) < 2:
-                # Trigger + command
-                return
-            # Ignore trigger case.
-            args[0] = args[0].lower()
-            if args[0] not in self.triggers and args[0] != f'<@{client.user["id"]}>':
-                return
-            await self.run_command_from_map(self.guild_channel_command_map, args[1:], client, message)
-            return
+        channel = await self.get_channel(message.channel_id)
+        if channel.type == Channel.Type.DM:
+            await self.run_command_from_map(args, message, is_dm=True)
+        elif has_trigger and on_allowed_channel:
+            await self.run_command_from_map(args, message, is_dm=False)
 
-        self.logger.info(f'Ignoring message from channel {message.channel_id}')
-
-    async def run_command_from_map(self, command_map, args, client, message):
-        """Executes the command named ``args[0]`` in ``command_map`` if it exists."""
+    async def run_command_from_map(self, args, message, is_dm):
+        """Executes the command named ``args[0]`` if it exists."""
 
         # Ignore command case.
         args[0] = args[0].lower()
-        command = command_map.get(args[0])
-        if command is None:
+        cmd = self.command_map.get(args[0])
+        if cmd is None:
             self.logger.info(f'Unrecognized command {args}')
             return
-
-        try:
-            await command.execute(args[1:], self, client, message)
-        except Command.IncorrectUsageException as ex:
-            self.logger.info(f'IncorrectUsageException: {args}')
-        return
+        if cmd.allow_dm and is_dm or cmd.allow_guild and not is_dm:
+            try:
+                await cmd.execute(self, args[1:], message)
+            except command.IncorrectUsageException as ex:
+                self.logger.info(f'Incorrect usage: {ex}')
+        else:
+            self.logger.info(f'Command not allowed in current channel type (guild/DM): "{message.content}"')
 
     async def get_channel(self, channel_id):
         """Returns the Discord channel with given channel id.
