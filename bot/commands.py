@@ -21,6 +21,8 @@ async def beep(bot, args, message):
 async def help(bot, args, message):
     if not args:
         reply = bot.help_message
+        await paginator.paginate_and_send(reply, bot, message.channel_id, per_page=4,
+                                          time_active=15 * 60, time_delay=2 * 60)
     else:
         command.assert_arglen(args, 1, cmd=message.content)
         cmd_name = args.pop()
@@ -34,7 +36,7 @@ async def help(bot, args, message):
                 'fields': [field],
             }
         }
-    await bot.client.send_message(reply, message.channel_id)
+        await bot.client.send_message(reply, message.channel_id)
 
 
 @command.command(desc='Displays bot info')
@@ -47,14 +49,12 @@ async def info(bot, args, message):
 @command.command(usage='next [cnt] [at] [cc] [cf] [px]',
                  desc='Displays future contests. If `cnt` is absent, displays the next contest. '
                       'If `all`, displays all upcoming contests. If `day`, displays contests '
-                      'which start within the next 24 hours. The `p` option specifies the page '
-                      'number, e.g `p3`. Optional site filters can be used, where `at` = '
-                      '*AtCoder*, `cc` = *CodeChef* and `cf` = *Codeforces*')
+                      'which start within the next 24 hours. Optional site filters can be used, '
+                      'where `at` = *AtCoder*, `cc` = *CodeChef* and `cf` = *Codeforces*')
 async def next(bot, args, message):
     args = [arg.lower() for arg in args]
     site_tag_to_name = {}
     cnt = None
-    page = None
     for arg in args:
         name = bot.site_container.get_site_name(arg)
         if name is not None:
@@ -62,17 +62,9 @@ async def next(bot, args, message):
         elif arg in ('all', 'day'):
             command.assert_none(cnt, msg='More than 1 cnt argument', cmd=message.content)
             cnt = arg
-        elif arg.startswith('p'):
-            command.assert_none(page, msg='More than 1 page argument', cmd=message.content)
-            page = arg[1:]
-            command.assert_int(page, msg='Non-int page argument', cmd=message.content)
-            page = int(page)
-            command.assert_true(page > 0, msg='Page argument <= 0', cmd=message.content)
         else:
             raise command.IncorrectUsageException(msg=f'Unrecognized argument "{arg}"', cmd=message.content)
-
     cnt = cnt or 1
-    page = page or 1
 
     if cnt == 'day':
         start_max = datetime.now().timestamp() + timedelta(days=1).total_seconds()
@@ -82,18 +74,16 @@ async def next(bot, args, message):
         contests = bot.site_container.get_future_contests_cnt(cnt, site_tag_to_name.keys())
         logger.info(f'{len(contests)} contests fetched out of {cnt}')
 
-    contests, page, num_pages = paginator.paginate(contests, bot.CONTESTS_PER_PAGE, page)
+    if contests:
+        reply = create_message_from_contests(contests, cnt, site_tag_to_name.values(), bot.TIMEZONE)
+        await paginator.paginate_and_send(reply, bot, message.channel_id, per_page=bot.CONTESTS_PER_PAGE,
+                                          time_active=15 * 60, time_delay=2 * 60)
+    else:
+        reply = {'content': '*No contest found*'}
+        await bot.client.send_message(reply, message.channel_id)
 
-    reply = create_message_from_contests(contests, cnt, site_tag_to_name.values(),
-                                         bot.TIMEZONE, page, num_pages)
-    await bot.client.send_message(reply, message.channel_id)
 
-
-def create_message_from_contests(contests, cnt, site_names, bot_timezone, page, num_pages):
-    if len(contests) == 0:
-        message = {'content': '*No contest found*'}
-        return message
-
+def create_message_from_contests(contests, cnt, site_names, bot_timezone):
     descs = []
     for contest in contests:
         start = datetime.fromtimestamp(contest.start, bot_timezone)
@@ -130,10 +120,6 @@ def create_message_from_contests(contests, cnt, site_names, bot_timezone, page, 
     }
     if site_names:
         embed['description'] = 'Showing only: ' + ', '.join(name for name in site_names)
-    if num_pages > 1:
-        embed['footer'] = {
-            'text': f'Page {page} / {num_pages}',
-        }
 
     message = {
         'content': f'*{title}*',

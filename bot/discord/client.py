@@ -38,6 +38,8 @@ class EventType:
     MESSAGE_DELETE = 'MESSAGE_DELETE'
     PRESENCE_UPDATE = 'PRESENCE_UPDATE'
     TYPING_START = 'TYPING_START'
+    MESSAGE_REACTION_ADD = 'MESSAGE_REACTION_ADD'
+    MESSAGE_REACTION_REMOVE = 'MESSAGE_REACTION_REMOVE'
 
 
 class Client:
@@ -53,6 +55,7 @@ class Client:
         self.activity_name = activity_name
 
         self.on_message = None
+        self.listeners = {}
         self.user = None
         self.start_time = None
         self.last_seq = None
@@ -153,17 +156,90 @@ class Client:
                 # Run on_message as a separate coroutine.
                 asyncio.create_task(self.on_message(message))
         else:
-            # Nothing else supported.
-            pass
+            dict_ = self.listeners.get(typ)
+            if dict_:
+                for listener in dict_.values():
+                    asyncio.create_task(listener(data))
+
+    def register_listener(self, event, tag, listener):
+        """Register a listener to listen to Discord gateway dispatch events.
+
+        :param event: the event type to listen to
+        :param tag: a unique tag to identify the listener by
+        :param listener: an awaitable listener
+        """
+        dict_ = self.listeners.setdefault(event, {})
+        if tag in dict_:
+            raise KeyError(f'Another listener with tag "{tag}" exists')
+        dict_[tag] = listener
+
+    def unregister_listener(self, event, tag):
+        """Unregister a listener to Discord gateway dispatch events by tag.
+
+        :param event: the event type the listener is registered with
+        :param tag: the unique tag of the listener
+        :return: whether a listener with the given tag was found and removed
+        """
+        dict_ = self.listeners.get(event)
+        if dict_ and tag in dict_:
+            del dict_[tag]
+            return True
+        return False
 
     async def send_message(self, message, channel_id):
         """Send a message on Discord.
 
-        :param message: the message as a dict.
-        :param channel_id: the channel to send the message to.
+        :param message: the message as a dict
+        :param channel_id: the channel to send the message to
+        :return: the sent Message object
         """
-        self.logger.info(f'Replying to channel {channel_id}')
-        await self._request('POST', f'/channels/{channel_id}/messages', json_data=message)
+        self.logger.info(f'Sending messge to channel {channel_id}')
+        message_d = await self._request('POST', f'/channels/{channel_id}/messages', json_data=message)
+        return Message(**message_d)
+
+    async def edit_message(self, channel_id, message_id, partial_message):
+        """Edit a previously sent message.
+
+        :param channel_id: the channel ID where the message exists
+        :param message_id: the ID of the message
+        :param partial_message: the partial message to replace the existing message
+        :return: the updated Message object
+        """
+        self.logger.info(f'Editing messge to channel {channel_id}')
+        message_d = await self._request('PATCH', f'/channels/{channel_id}/messages/{message_id}',
+                                        json_data=partial_message)
+        return Message(**message_d)
+
+    async def add_reaction(self, channel_id, message_id, emoji):
+        """Add a reaction to a message.
+
+        :param channel_id: the channel ID where the message exists
+        :param message_id: the ID of the message
+        :param emoji: the emoji to react with
+        """
+        self.logger.info(f'Adding react {emoji} to message {message_id}')
+        await self._request('PUT', f'/channels/{channel_id}/messages/{message_id}/reactions/{emoji}/@me',
+                            expect_json=False)
+
+    async def delete_own_reaction(self, channel_id, message_id, emoji):
+        """Delete a reaction to a message by this bot.
+
+        :param channel_id: the channel ID where the message exists
+        :param message_id: the ID of the message
+        :param emoji: the reaction to delete
+        """
+        self.logger.info(f'Deleting react {emoji} to message {message_id}')
+        await self._request('DELETE', f'/channels/{channel_id}/messages/{message_id}/reactions/{emoji}/@me',
+                            expect_json=False)
+
+    async def delete_all_reactions(self, channel_id, message_id):
+        """Delete all reactions to a message.
+
+        :param channel_id: the channel ID where the message exists
+        :param message_id: the ID of the message
+        """
+        self.logger.info(f'Deleting all reacts on message {message_id}')
+        await self._request('DELETE', f'/channels/{channel_id}/messages/{message_id}/reactions', expect_json=False)
 
     async def get_channel(self, channel_id):
         """Get the channel object for the channel with given id."""
