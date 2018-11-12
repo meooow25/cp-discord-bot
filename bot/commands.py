@@ -170,15 +170,10 @@ async def sub(bot, args, message):
 
     bot.entity_manager.create_user(user_id, message.channel_id)
     await bot.entity_manager.update_user_site_profile(user_id, profile)
-    desc = f'Name: {profile.name}\n' if profile.name is not None else ''
-    desc += f'Rating: {profile.rating if profile.rating is not None else "Unrated"}'
+    embed = bot.entity_manager.get_user(user_id).get_profile_embed(site_tag)
     reply = {
         'content': '*Your profile has been registered*',
-        'embed': {
-            'title': f'{handle} on {site_name}',
-            'url': profile.url,
-            'description': desc,
-        },
+        'embed': embed,
     }
     await bot.client.send_message(reply, message.channel_id)
 

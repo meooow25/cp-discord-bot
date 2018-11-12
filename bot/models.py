@@ -23,7 +23,12 @@ class User:
         old_profile = self._profile_map.get(profile.site_tag)
         self._profile_map[profile.site_tag] = profile
         self.site_profiles = list(self._profile_map.values())
-        return old_profile is None or old_profile.to_dict() != profile.to_dict()
+        if old_profile is None:
+            changed_any = changed_name_or_rating = True
+        else:
+            changed_any = old_profile.to_dict() != profile.to_dict()
+            changed_name_or_rating = (old_profile.name, old_profile.rating) != (profile.name, profile.rating)
+        return changed_any, changed_name_or_rating
 
     def delete_profile(self, site_tag):
         """Delete the user's profile aasociated with the given site tag.
@@ -40,6 +45,35 @@ class User:
     def get_profile_for_site(self, site_tag):
         """Returns the site profile of the user for the given site tag, ``None`` if no such profile exists."""
         return self._profile_map.get(site_tag)
+
+    def get_profile_embed(self, site_tag):
+        profile = self.get_profile_for_site(site_tag)
+        if profile is None:
+            return None
+        return {
+            'author': profile.make_embed_author(),
+            'description': profile.make_embed_name_and_rating_text(),
+            'footer': profile.make_embed_footer(),
+        }
+
+    @staticmethod
+    def get_profile_change_embed(old_profile, new_profile):
+        return {
+            'author': new_profile.make_embed_author(),
+            'fields': [
+                {
+                    'name': 'Previous',
+                    'value': old_profile.make_embed_name_and_rating_text(),
+                    'inline': 'true',
+                },
+                {
+                    'name': 'Current',
+                    'value': new_profile.make_embed_name_and_rating_text(),
+                    'inline': 'true',
+                },
+            ],
+            'footer': new_profile.make_embed_footer(),
+        }
 
     @classmethod
     def from_dict(cls, user_d):

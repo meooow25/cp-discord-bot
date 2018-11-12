@@ -10,7 +10,7 @@ from .models import Contest, Profile
 class CodeChef(CPSite):
     NAME = 'CodeChef'
     TAG = 'cc'
-    BASE_URL = 'https://wwww.codechef.com'
+    BASE_URL = 'https://www.codechef.com'
     CONTESTS_PATH = '/contests'
     USERS_PATH = '/users'
 
@@ -21,8 +21,10 @@ class CodeChef(CPSite):
         path = self.BASE_URL + path
         headers = {'User-Agent': f'aiohttp/{aiohttp.__version__}'}
         self.logger.debug(f'GET {path} {headers}')
-        async with aiohttp.request('GET', path, headers=headers) as response:
+        async with aiohttp.request('GET', path, headers=headers, allow_redirects=False) as response:
             response.raise_for_status()
+            if 301 <= response.status <= 399:
+                raise ValueError(f'Request status {response.status}')
             return await response.text()
 
     async def fetch_future_contests(self):
@@ -75,15 +77,20 @@ class CodeChef(CPSite):
                 # User not found.
                 return None
             raise
+        except ValueError:
+            # Team handle provided, site attempted to redirect.
+            return None
 
         soup = BeautifulSoup(html, 'html.parser')
 
-        name_tag = soup.find('div', class_='user-details-container').header.h2
+        user_details = soup.find('div', class_='user-details-container')
+        name_tag = user_details.header.h2
         name = str(name_tag.string)
+        avatar = self.BASE_URL + user_details.header.img['src']
 
         rating_tag = soup.find('div', class_='rating-number')
         rating = int(rating_tag.string)
         if rating == 0:
             # User is either unrated or truly terrible at CP, assume former.
             rating = None
-        return Profile(handle, self.TAG, self.NAME, self.BASE_URL + path, name, rating)
+        return Profile(handle, self.TAG, self.NAME, self.BASE_URL + path, avatar, name, rating)

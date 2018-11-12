@@ -55,4 +55,6 @@ class Codeforces(CPSite):
             fullname = None
         rating = result.get('rating')
         url = self.BASE_URL + self.USERS_PATH + '/' + handle
-        return Profile(handle, self.TAG, self.NAME, url, fullname, rating)
+        # Avatar comes in the form '//userpic.codeforces.com/<userid>/avatar/<random_hex_string>.jpg'.
+        avatar = 'http:' + result['avatar']
+        return Profile(handle, self.TAG, self.NAME, url, avatar, fullname, rating)

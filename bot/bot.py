@@ -5,6 +5,7 @@ from operator import itemgetter
 
 from . import command, commands
 from .discord import Channel
+from .models import User
 
 
 class Bot:
@@ -140,28 +141,8 @@ class Bot:
         if not changed:
             return
         self.logger.debug(f'Changed profile: {old_profile.to_dict()}, {new_profile.to_dict()}')
-        old_str = f'Name: {old_profile.name}\n' if old_profile.name is not None else ''
-        old_str += f'Rating: {old_profile.rating if old_profile.rating is not None else "Unrated"}'
-        new_str = f'Name: {new_profile.name}\n' if new_profile.name is not None else ''
-        new_str += f'Rating: {new_profile.rating if new_profile.rating is not None else "Unrated"}'
-        fields = [
-            {
-                'name': 'Previous',
-                'value': old_str,
-                'inline': 'true',
-            },
-            {
-                'name': 'Current',
-                'value': new_str,
-                'inline': 'true',
-            },
-        ]
         msg = {
             'content': '*Your profile has been updated*',
-            'embed': {
-                'title': f'{new_profile.handle} on {new_profile.site_name}',
-                'url': new_profile.url,
-                'fields': fields,
-            },
+            'embed': User.get_profile_change_embed(old_profile, new_profile)
         }
         await self.client.send_message(msg, user.dm_channel_id)

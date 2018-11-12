@@ -82,6 +82,15 @@ class AtCoder(CPSite):
         # No option of real name on AtCoder.
         name = None
 
+        avatar_tag = soup.find('img', class_='avatar')
+        avatar = avatar_tag['src']
+        if 'avatar.png' in avatar:
+            # Relative URL for default avatar
+            avatar = self.BASE_URL + avatar
+        else:
+            # Absolute URL otherwise (img.atcoder.jp)
+            pass
+
         rating_heading = soup.find('th', text='Rating')
         if rating_heading is None:
             # User is unrated.
@@ -89,4 +98,4 @@ class AtCoder(CPSite):
         else:
             rating_tag = rating_heading.next_sibling.span
             rating = int(rating_tag.string)
-        return Profile(handle, self.TAG, self.NAME, self.BASE_URL + path, name, rating)
+        return Profile(handle, self.TAG, self.NAME, self.BASE_URL + path, avatar, name, rating)

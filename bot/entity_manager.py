@@ -41,7 +41,9 @@ class EntityManager:
         return self._user_id_to_user.get(user_id)
 
     def create_user(self, user_id, dm_channel_id):
-        """Creates a new user with given Discord id and DM channel id. Does nothing if user already exists."""
+        """Creates a new user with given Discord id and DM channel id. Does nothing if user already
+        exists.
+        """
         user = self._user_id_to_user.get(user_id)
         if user is None:
             user = User(user_id, dm_channel_id)
@@ -49,14 +51,15 @@ class EntityManager:
             self._user_id_to_user[user_id] = user
 
     async def update_user_site_profile(self, user_id, profile):
-        """Creates or updates a user's site profile to the given profile."""
+        """Creates or updates a user's site profile to the given profile. Returns whether the name
+        or rating changed.
+        """
         user = self._user_id_to_user.get(user_id)
-        changed = user.update_profile(profile)
-        # TODO: Optimize to update instead of replace.
-        if changed:
+        changed_any, changed_name_or_rating = user.update_profile(profile)
+        if changed_any:
             await self.db_connector.put_user(user.to_dict())
             self.logger.info(f'Saved user with id {user_id} to db')
-        return changed
+        return changed_name_or_rating
 
     async def delete_user_site_profile(self, user_id, site_tag):
         """Deletes a user's site profile associated with the given site tag."""
