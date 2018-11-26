@@ -75,6 +75,21 @@ class User:
             'footer': new_profile.make_embed_footer(),
         }
 
+    def get_all_profiles_embed(self):
+        if not self.site_profiles:
+            return None
+        self.site_profiles.sort(key=lambda profile: profile.site_name)
+        fields = []
+        for profile in self.site_profiles:
+            field = {
+                'name': profile.site_name,
+                'value': profile.make_embed_handle_text() + '\n'
+                         + profile.make_embed_name_and_rating_text(),
+                'inline': True,
+            }
+            fields.append(field)
+        return {'fields': fields}
+
     @classmethod
     def from_dict(cls, user_d):
         """Creates and returns a user object from its ``dict`` representation."""

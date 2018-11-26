@@ -106,10 +106,10 @@ def create_message_from_contests(contests, cnt, site_names, bot_timezone):
     def make_field(name, site_name, start, duration, url):
         return {
             'name': name,
-            'value': f'`{site_name.ljust(max_site_name_len, em)}{em}|'
-                     f'{em}{start}{em}|'
-                     f'{em}{duration.rjust(max_duration_len, em)}{em}|'
-                     f'{em}`[`link \u25F3`]({url} "Link to contest page")'
+            'value': (f'`{site_name.ljust(max_site_name_len, em)}{em}|'
+                      f'{em}{start}{em}|'
+                      f'{em}{duration.rjust(max_duration_len, em)}{em}|'
+                      f'{em}`[`link \u25F3`]({url} "Link to contest page")'),
         }
 
     if cnt == 'day':
@@ -151,8 +151,54 @@ async def status(bot, args, message):
     await bot.client.send_message(reply, message.channel_id)
 
 
+@command.command(usage='showsub [at|cc|cf]',
+                 desc='Show registered profiles. A particular site can be specified',
+                 allow_dm=True)
+async def showsub(bot, args, message):
+    user_id = message.author.id
+    user = bot.entity_manager.get_user(user_id)
+    if not args:
+        if user is None:
+            reply = {'content': f'*You are not subscribed to any site*'}
+            await bot.client.send_message(reply, message.channel_id)
+            return
+
+        embed = user.get_all_profiles_embed()
+        if not embed:
+            reply = {'content': f'*You are not subscribed to any site*'}
+            await bot.client.send_message(reply, message.channel_id)
+            return
+
+        reply = {
+            'content': '*Your registered profiles:*',
+            'embed': embed,
+        }
+        await bot.client.send_message(reply, message.channel_id)
+        return
+
+    command.assert_arglen(args, 1, cmd=message.content)
+    site_tag = args[0].lower()
+    site_name = bot.site_container.get_site_name(site_tag)
+    command.assert_not_none(site_name, msg='Unrecognized site', cmd=message.content)
+
+    if user is None:
+        reply = {'content': f'*You are not subscribed to {site_name}*'}
+        await bot.client.send_message(reply, message.channel_id)
+        return
+
+    profile = bot.entity_manager.get_user(user_id).get_profile_for_site(site_tag)
+    if profile is None:
+        reply = {'content': f'*You are not subscribed to {site_name}*'}
+        await bot.client.send_message(reply, message.channel_id)
+        return
+
+    embed = bot.entity_manager.get_user(user_id).get_profile_embed(site_tag)
+    reply = {'embed': embed}
+    await bot.client.send_message(reply, message.channel_id)
+
+
 @command.command(usage='sub at|cc|cf handle',
-                 desc='Subscribe to rating changes. DM only. Experimental feature',
+                 desc='Subscribe to profile changes',
                  allow_dm=True)
 async def sub(bot, args, message):
     command.assert_arglen(args, 2, cmd=message.content)
@@ -186,7 +232,7 @@ async def sub(bot, args, message):
 
 
 @command.command(usage='unsub at|cc|cf',
-                 desc='Unsubscribe from rating changes. DM only. Experimental feature',
+                 desc='Unsubscribe from profile changes',
                  allow_dm=True)
 async def unsub(bot, args, message):
     command.assert_arglen(args, 1, cmd=message.content)

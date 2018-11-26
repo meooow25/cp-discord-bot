@@ -49,6 +49,9 @@ class Profile:
         self.name = name
         self.rating = rating
 
+    def make_embed_handle_text(self):
+        return f'**Handle**: [{self.handle}]({self.url})'
+
     def make_embed_author(self):
         """Make an author section for a Discord embed."""
         return {
