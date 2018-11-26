@@ -59,8 +59,8 @@ class Profile:
 
     def make_embed_name_and_rating_text(self):
         """Make a formatted string containing name and rating."""
-        desc = f'Name: {self.name}\n' if self.name is not None else ''
-        desc += f'Rating: {self.rating if self.rating is not None else "Unrated"}'
+        desc = f'**Name**: {self.name}\n' if self.name is not None else ''
+        desc += f'**Rating**: {self.rating if self.rating is not None else "Unrated"}'
         return desc
 
     def make_embed_footer(self):

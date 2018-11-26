@@ -3,6 +3,7 @@ import logging
 import time
 from datetime import datetime, timedelta
 
+from .discord import Channel
 from . import command, paginator
 
 logger = logging.getLogger(__name__)
@@ -152,7 +153,7 @@ async def status(bot, args, message):
 
 @command.command(usage='sub at|cc|cf handle',
                  desc='Subscribe to rating changes. DM only. Experimental feature',
-                 allow_guild=False, allow_dm=True)
+                 allow_dm=True)
 async def sub(bot, args, message):
     command.assert_arglen(args, 2, cmd=message.content)
     user_id = message.author.id
@@ -168,7 +169,13 @@ async def sub(bot, args, message):
         await bot.client.send_message(reply, message.channel_id)
         return
 
-    bot.entity_manager.create_user(user_id, message.channel_id)
+    if bot.entity_manager.get_user(user_id) is None:
+        # Register new user with DM channel ID.
+        channel = await bot.get_channel(message.channel_id)
+        if channel.type != Channel.Type.DM:
+            channel = await bot.client.get_dm_channel(user_id)
+        bot.entity_manager.create_user(user_id, channel.id)
+
     await bot.entity_manager.update_user_site_profile(user_id, profile)
     embed = bot.entity_manager.get_user(user_id).get_profile_embed(site_tag)
     reply = {
@@ -180,18 +187,20 @@ async def sub(bot, args, message):
 
 @command.command(usage='unsub at|cc|cf',
                  desc='Unsubscribe from rating changes. DM only. Experimental feature',
-                 allow_guild=False, allow_dm=True)
+                 allow_dm=True)
 async def unsub(bot, args, message):
     command.assert_arglen(args, 1, cmd=message.content)
     user_id = message.author.id
     site_tag = args[0].lower()
     site_name = bot.site_container.get_site_name(site_tag)
     command.assert_not_none(site_name, msg='Unrecognized site', cmd=message.content)
+
     user = bot.entity_manager.get_user(user_id)
     if user is None:
         reply = {'content': f'*You are not subscribed to {site_name}*'}
         await bot.client.send_message(reply, message.channel_id)
         return
+
     profile = bot.entity_manager.get_user(user_id).get_profile_for_site(site_tag)
     if profile is None:
         reply = {'content': f'*You are not subscribed to {site_name}*'}
